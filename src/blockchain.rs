@@ -90,15 +90,100 @@ impl Blockchain {
         self.config.initial_block_reward / (2_u64.pow(halvings as u32) as f64)
     }
 
-    // [NEW] 거래를 대기열(멤풀)에 추가한다
-    // 아직 블록에 포함된 게 아니라, "대기 중"인 상태이다.
-    // 채굴자가 mine_pending()을 호출해야 블록에 포함된다.
-    pub fn add_transaction(&mut self, transaction: Transaction) {
-        println!(
-            "  [TX] 거래 추가 → 멤풀 대기: {}",
-            transaction
-        );
+    // ============================================================
+    // get_balance() — 특정 주소의 잔액을 계산한다
+    // ============================================================
+    // 블록체인에 "잔액"이라는 필드는 없다.
+    // 전체 거래 내역을 처음부터 끝까지 훑으면서
+    // "받은 금액 - 보낸 금액 = 잔액"을 계산한다.
+    //
+    // 실제 비트코인은 UTXO 모델이라 방식이 다르지만,
+    // 결과적으로 "사용 가능한 금액"을 구하는 건 같다.
+    pub fn get_balance(&self, address: &str) -> f64 {
+        let mut balance: f64 = 0.0;
+
+        // 블록체인에 기록된 모든 블록의 모든 거래를 확인
+        for block in &self.chain {
+            for tx in &block.transactions {
+                // 이 주소가 받은 거래 → 잔액 증가
+                if tx.to == address {
+                    balance += tx.amount;
+                }
+                // 이 주소가 보낸 거래 → 잔액 감소 (코인베이스는 제외)
+                if tx.from == address && !tx.is_coinbase() {
+                    balance -= tx.amount;
+                }
+            }
+        }
+
+        // 멤풀(대기 중인 거래)도 고려한다.
+        // 아직 블록에 안 들어갔지만, 보내기로 한 금액은 빼야 한다.
+        // 안 그러면 같은 돈을 두 번 보내는 "이중 지불"이 가능해진다.
+        for tx in &self.pending_transactions {
+            if tx.to == address {
+                balance += tx.amount;
+            }
+            if tx.from == address && !tx.is_coinbase() {
+                balance -= tx.amount;
+            }
+        }
+
+        balance
+    }
+
+    // 전체 사용자의 잔액을 출력한다
+    pub fn print_balances(&self) {
+        // 모든 거래에서 등장하는 주소를 수집한다.
+        // Vec을 쓰고 중복 체크 — 간단한 교육용 구현
+        let mut addresses: Vec<String> = Vec::new();
+
+        for block in &self.chain {
+            for tx in &block.transactions {
+                if !tx.is_coinbase() && !addresses.contains(&tx.from) {
+                    addresses.push(tx.from.clone());
+                }
+                if !addresses.contains(&tx.to) {
+                    addresses.push(tx.to.clone());
+                }
+            }
+        }
+
+        println!("  ┌─ [잔액 현황] ─────────────────────────────┐");
+        for addr in &addresses {
+            println!("  │  {:<12} : {:>10.2} BTC", addr, self.get_balance(addr));
+        }
+        println!("  └───────────────────────────────────────────┘");
+    }
+
+    // 거래를 대기열(멤풀)에 추가한다 — 잔액 검증 포함!
+    // 보내는 사람의 잔액이 부족하면 거래를 거부한다.
+    pub fn add_transaction(&mut self, transaction: Transaction) -> bool {
+        // 코인베이스 거래는 검증 없이 통과 (새 코인 생성이니까)
+        if transaction.is_coinbase() {
+            self.pending_transactions.push(transaction);
+            return true;
+        }
+
+        // 잔액 검증: 보내는 사람이 충분한 잔액을 가지고 있는가?
+        let sender_balance = self.get_balance(&transaction.from);
+
+        if sender_balance < transaction.amount {
+            println!(
+                "  [REJECTED] 거래 거부! {} 잔액 부족 (보유: {:.2} BTC, 시도: {:.2} BTC)",
+                transaction.from, sender_balance, transaction.amount
+            );
+            return false;
+        }
+
+        // 금액이 0 이하인 거래도 거부
+        if transaction.amount <= 0.0 {
+            println!("  [REJECTED] 거래 거부! 금액은 0보다 커야 합니다.");
+            return false;
+        }
+
+        println!("  [TX] 거래 승인 → 멤풀 대기: {}", transaction);
         self.pending_transactions.push(transaction);
+        true
     }
 
     // [NEW] 대기 중인 거래들을 모아서 블록을 채굴한다.
