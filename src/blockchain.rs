@@ -3,38 +3,38 @@
 // ============================================================
 
 use crate::block::Block;
+use crate::config::ChainConfig;
 
 pub struct Blockchain {
     pub(crate) chain: Vec<Block>,
+
+    // 현재 난이도 (자동 조정으로 변한다)
     pub difficulty: usize,
 
-    // [NEW] 난이도 자동 조정에 필요한 설정값들
-    //
-    // adjustment_interval: 몇 블록마다 난이도를 조정할지
-    //   실제 비트코인: 2016블록마다
-    //   우리 코드: 4블록마다 (빠르게 체험하려고)
-    pub adjustment_interval: u64,
-
-    // target_time_per_block: 블록 1개당 목표 시간 (초)
-    //   실제 비트코인: 600초 (10분)
-    //   우리 코드: 직접 설정 가능
-    pub target_time_per_block: u64,
+    // 설정값 — ChainConfig에서 가져온다.
+    // 이제 모든 파라미터가 config 안에 들어있다.
+    pub config: ChainConfig,
 }
 
 impl Blockchain {
-    pub fn new(difficulty: usize, adjustment_interval: u64, target_time_per_block: u64) -> Self {
-        println!("  [INIT] 난이도: {} (해시 앞자리 {}개가 0이어야 함)", difficulty, difficulty);
-        println!("  [INIT] {}블록마다 난이도 자동 조정", adjustment_interval);
-        println!("  [INIT] 블록당 목표 시간: {}초", target_time_per_block);
-        println!("  [INIT] 제네시스 블록 채굴 중...");
+    // ChainConfig를 받아서 블록체인을 생성한다.
+    // 이전에는 (difficulty, adjustment_interval, target_time_per_block)을
+    // 따로따로 받았지만, 이제는 config 하나로 통합.
+    pub fn new(config: ChainConfig) -> Self {
+        config.print_config();
+        println!("\n  [INIT] 제네시스 블록 채굴 중...");
 
-        let genesis = Block::mine(0, "Genesis Block".to_string(), "0".to_string(), difficulty);
+        let genesis = Block::mine(
+            0,
+            "Genesis Block".to_string(),
+            "0".to_string(),
+            config.initial_difficulty,
+        );
 
         Blockchain {
             chain: vec![genesis],
-            difficulty,
-            adjustment_interval,
-            target_time_per_block,
+            difficulty: config.initial_difficulty,
+            config,
         }
     }
 
@@ -42,49 +42,36 @@ impl Blockchain {
         self.chain.last().expect("Chain must have at least one block")
     }
 
-    // ============================================================
-    // adjust_difficulty() — 난이도 자동 조정
-    // ============================================================
-    // 비트코인의 핵심 규칙:
-    //   "N블록마다 시간을 확인해서, 목표보다 빨랐으면 난이도 올리고,
-    //    느렸으면 난이도 내린다."
-    //
-    // 이걸로 블록 생성 속도가 항상 일정하게 유지된다.
+    // 난이도 자동 조정 — config에서 설정값을 가져온다
     fn adjust_difficulty(&mut self) {
         let chain_len = self.chain.len() as u64;
 
-        // adjustment_interval의 배수가 아니면 조정하지 않는다.
-        // % = 나머지 연산 (JavaScript와 동일)
-        // chain_len=4이고 interval=4이면 → 4 % 4 = 0 → 조정!
-        // chain_len=5이면 → 5 % 4 = 1 → 아직 아님
-        if chain_len < self.adjustment_interval || chain_len % self.adjustment_interval != 0 {
+        if chain_len < self.config.adjustment_interval
+            || chain_len % self.config.adjustment_interval != 0
+        {
             return;
         }
 
-        // 최근 N블록의 시작 블록과 끝 블록의 timestamp를 비교한다.
-        // 예: interval=4이면, 4블록 전의 timestamp와 지금 timestamp의 차이를 본다.
-        let start_index = (chain_len - self.adjustment_interval) as usize;
+        let start_index = (chain_len - self.config.adjustment_interval) as usize;
         let start_time = self.chain[start_index].timestamp;
         let end_time = self.latest_block().timestamp;
 
-        // 실제 걸린 시간 (초)
         let actual_time = end_time - start_time;
-
-        // 목표 시간 (초): 블록당 목표 시간 × 블록 수
-        let expected_time = self.target_time_per_block * self.adjustment_interval;
+        let expected_time = self.config.target_time_per_block * self.config.adjustment_interval;
 
         println!("\n  ┌─ [난이도 자동 조정] ─────────────────────┐");
-        println!("  │  최근 {}블록 실제 시간: {}초", self.adjustment_interval, actual_time);
+        println!(
+            "  │  최근 {}블록 실제 시간: {}초",
+            self.config.adjustment_interval, actual_time
+        );
         println!("  │  목표 시간:            {}초", expected_time);
 
         let old_difficulty = self.difficulty;
 
         if actual_time < expected_time / 2 {
-            // 목표의 절반보다 빨랐으면 → 난이도 올림
             self.difficulty += 1;
             println!("  │  판정: 너무 빠르다! 난이도 UP");
         } else if actual_time > expected_time * 2 {
-            // 목표의 2배보다 느렸으면 → 난이도 내림 (최소 1)
             if self.difficulty > 1 {
                 self.difficulty -= 1;
             }
@@ -97,14 +84,35 @@ impl Blockchain {
         println!("  └──────────────────────────────────────────┘\n");
     }
 
+    // 현재 블록 높이에 따른 채굴 보상을 계산한다.
+    // 반감기(halving_interval)마다 보상이 절반으로 줄어든다.
+    // 비트코인: 50 → 25 → 12.5 → 6.25 → 3.125 BTC
+    pub fn current_block_reward(&self) -> f64 {
+        let block_height = self.chain.len() as u64;
+        // 몇 번 반감했는지 계산
+        // 예: 블록 420,001이고 halving_interval=210,000이면
+        //     420001 / 210000 = 2 → 2번 반감 → 50 / 4 = 12.5 BTC
+        let halvings = block_height / self.config.halving_interval;
+
+        // 2의 halvings제곱으로 나눈다
+        // halvings=0 → 50 / 1 = 50
+        // halvings=1 → 50 / 2 = 25
+        // halvings=2 → 50 / 4 = 12.5
+        // halvings=3 → 50 / 8 = 6.25
+        self.config.initial_block_reward / (2_u64.pow(halvings as u32) as f64)
+    }
+
     pub fn add_block(&mut self, data: String) {
-        // 블록 추가 전에 난이도 조정이 필요한지 확인
         self.adjust_difficulty();
 
+        let reward = self.current_block_reward();
         let previous_hash = self.latest_block().hash.clone();
         let new_id = self.chain.len() as u64;
 
-        println!("  [MINING] Block #{new_id} 채굴 중... (난이도: {})", self.difficulty);
+        println!(
+            "  [MINING] Block #{new_id} 채굴 중... (난이도: {}, 보상: {} BTC)",
+            self.difficulty, reward
+        );
         let block = Block::mine(new_id, data, previous_hash, self.difficulty);
         self.chain.push(block);
     }
@@ -144,7 +152,10 @@ impl Blockchain {
     }
 
     pub fn print_chain(&self) {
-        println!("=== Visual Bitcoin Engine (difficulty: {}) ===", self.difficulty);
+        println!(
+            "=== Visual Bitcoin Engine (difficulty: {}) ===",
+            self.difficulty
+        );
         println!("Chain length: {}\n", self.chain.len());
 
         for block in &self.chain {
