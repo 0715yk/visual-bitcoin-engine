@@ -2,6 +2,8 @@
 // blockchain.rs — Blockchain 구조체와 검증/조작 로직을 담당하는 모듈
 // ============================================================
 
+use std::collections::HashMap;
+
 use crate::block::Block;
 use crate::config::ChainConfig;
 use crate::transaction::Transaction;
@@ -10,11 +12,19 @@ pub struct Blockchain {
     pub(crate) chain: Vec<Block>,
     pub difficulty: usize,
     pub config: ChainConfig,
-
-    // [NEW] 아직 블록에 포함되지 않은 대기 중인 거래들
-    // 실제 비트코인에서는 이걸 "멤풀(Mempool)"이라고 부른다.
-    // 거래가 들어오면 여기에 쌓이고, 채굴할 때 여기서 꺼내서 블록에 넣는다.
     pub pending_transactions: Vec<Transaction>,
+
+    // [NEW] 잔액 캐시 — 매번 전체 체인을 순회하지 않고 즉시 잔액을 조회
+    //
+    // HashMap<String, f64>는 JavaScript의 Map<string, number>과 같다.
+    // 키: 주소(이름), 값: 잔액(BTC)
+    // 예: { "Alice": 2.0, "Bob": 15.0, "Miner1": 180.0 }
+    //
+    // 이전: get_balance() → 블록 전체를 처음부터 끝까지 순회 → 느림
+    // 지금: get_balance() → 캐시에서 바로 조회 → 즉시!
+    //
+    // 블록이 추가되거나 거래가 멤풀에 들어올 때 캐시를 업데이트한다.
+    balances: HashMap<String, f64>,
 }
 
 impl Blockchain {
@@ -22,7 +32,6 @@ impl Blockchain {
         config.print_config();
         println!("\n  [INIT] 제네시스 블록 채굴 중...");
 
-        // 제네시스 블록은 거래 없이 빈 블록으로 생성
         let genesis = Block::mine(
             0,
             vec![],
@@ -35,6 +44,7 @@ impl Blockchain {
             difficulty: config.initial_difficulty,
             config,
             pending_transactions: Vec::new(),
+            balances: HashMap::new(),
         }
     }
 
@@ -42,7 +52,6 @@ impl Blockchain {
         self.chain.last().expect("Chain must have at least one block")
     }
 
-    // 난이도 자동 조정
     fn adjust_difficulty(&mut self) {
         let chain_len = self.chain.len() as u64;
 
@@ -91,80 +100,59 @@ impl Blockchain {
     }
 
     // ============================================================
-    // get_balance() — 특정 주소의 잔액을 계산한다
+    // get_balance() — 캐시에서 즉시 잔액 조회
     // ============================================================
-    // 블록체인에 "잔액"이라는 필드는 없다.
-    // 전체 거래 내역을 처음부터 끝까지 훑으면서
-    // "받은 금액 - 보낸 금액 = 잔액"을 계산한다.
+    // 이전: 전체 블록체인을 순회하면서 계산 → O(n) (블록 수에 비례)
+    // 지금: HashMap에서 바로 조회 → O(1) (즉시!)
     //
-    // 실제 비트코인은 UTXO 모델이라 방식이 다르지만,
-    // 결과적으로 "사용 가능한 금액"을 구하는 건 같다.
+    // *entry.or_insert(0.0) — HashMap에 키가 없으면 0.0을 넣고,
+    //                         있으면 기존 값을 가져온다.
+    // JavaScript의 map.get(key) ?? 0 과 비슷하다.
     pub fn get_balance(&self, address: &str) -> f64 {
-        let mut balance: f64 = 0.0;
-
-        // 블록체인에 기록된 모든 블록의 모든 거래를 확인
-        for block in &self.chain {
-            for tx in &block.transactions {
-                // 이 주소가 받은 거래 → 잔액 증가
-                if tx.to == address {
-                    balance += tx.amount;
-                }
-                // 이 주소가 보낸 거래 → 잔액 감소 (코인베이스는 제외)
-                if tx.from == address && !tx.is_coinbase() {
-                    balance -= tx.amount;
-                }
-            }
-        }
-
-        // 멤풀(대기 중인 거래)도 고려한다.
-        // 아직 블록에 안 들어갔지만, 보내기로 한 금액은 빼야 한다.
-        // 안 그러면 같은 돈을 두 번 보내는 "이중 지불"이 가능해진다.
-        for tx in &self.pending_transactions {
-            if tx.to == address {
-                balance += tx.amount;
-            }
-            if tx.from == address && !tx.is_coinbase() {
-                balance -= tx.amount;
-            }
-        }
-
-        balance
+        // .copied() — &f64(참조)를 f64(값)로 복사한다.
+        // .unwrap_or(0.0) — 키가 없으면 0.0을 반환한다.
+        *self.balances.get(address).unwrap_or(&0.0)
     }
 
-    // 전체 사용자의 잔액을 출력한다
-    pub fn print_balances(&self) {
-        // 모든 거래에서 등장하는 주소를 수집한다.
-        // Vec을 쓰고 중복 체크 — 간단한 교육용 구현
-        let mut addresses: Vec<String> = Vec::new();
-
-        for block in &self.chain {
-            for tx in &block.transactions {
-                if !tx.is_coinbase() && !addresses.contains(&tx.from) {
-                    addresses.push(tx.from.clone());
-                }
-                if !addresses.contains(&tx.to) {
-                    addresses.push(tx.to.clone());
-                }
-            }
+    // 캐시에 거래를 반영한다 (잔액 업데이트)
+    fn apply_transaction_to_cache(&mut self, tx: &Transaction) {
+        if !tx.is_coinbase() {
+            // 보낸 사람 잔액 감소
+            let sender = self.balances.entry(tx.from.clone()).or_insert(0.0);
+            *sender -= tx.amount;
         }
+        // 받는 사람 잔액 증가
+        let receiver = self.balances.entry(tx.to.clone()).or_insert(0.0);
+        *receiver += tx.amount;
+    }
 
+    // 전체 사용자의 잔액을 출력
+    pub fn print_balances(&self) {
         println!("  ┌─ [잔액 현황] ─────────────────────────────┐");
-        for addr in &addresses {
-            println!("  │  {:<12} : {:>10.2} BTC", addr, self.get_balance(addr));
+
+        // 잔액이 있는 주소만 출력 (0 이하는 제외)
+        // .iter() — HashMap의 (키, 값) 쌍을 하나씩 꺼낸다.
+        //           JavaScript의 Object.entries()와 같다.
+        let mut entries: Vec<(&String, &f64)> = self.balances.iter().collect();
+
+        // 이름순으로 정렬 (보기 좋게)
+        entries.sort_by_key(|(name, _)| name.to_string());
+
+        for (addr, balance) in entries {
+            if *balance > 0.0 {
+                println!("  │  {:<12} : {:>10.2} BTC", addr, balance);
+            }
         }
         println!("  └───────────────────────────────────────────┘");
     }
 
-    // 거래를 대기열(멤풀)에 추가한다 — 잔액 검증 포함!
-    // 보내는 사람의 잔액이 부족하면 거래를 거부한다.
+    // 거래를 멤풀에 추가 — 잔액 검증 포함
     pub fn add_transaction(&mut self, transaction: Transaction) -> bool {
-        // 코인베이스 거래는 검증 없이 통과 (새 코인 생성이니까)
         if transaction.is_coinbase() {
             self.pending_transactions.push(transaction);
             return true;
         }
 
-        // 잔액 검증: 보내는 사람이 충분한 잔액을 가지고 있는가?
         let sender_balance = self.get_balance(&transaction.from);
 
         if sender_balance < transaction.amount {
@@ -175,40 +163,34 @@ impl Blockchain {
             return false;
         }
 
-        // 금액이 0 이하인 거래도 거부
         if transaction.amount <= 0.0 {
             println!("  [REJECTED] 거래 거부! 금액은 0보다 커야 합니다.");
             return false;
         }
 
         println!("  [TX] 거래 승인 → 멤풀 대기: {}", transaction);
+
+        // 멤풀에 추가할 때도 캐시를 업데이트해서 이중 지불을 방지한다.
+        self.apply_transaction_to_cache(&transaction);
         self.pending_transactions.push(transaction);
         true
     }
 
-    // [NEW] 대기 중인 거래들을 모아서 블록을 채굴한다.
-    // miner_address: 채굴 보상을 받을 주소
-    //
-    // 실제 비트코인 흐름:
-    //   1. 사용자들이 거래를 보냄 → 멤풀에 쌓임
-    //   2. 채굴자가 멤풀에서 거래를 골라서 블록에 넣음
-    //   3. 맨 앞에 코인베이스 거래(채굴 보상)를 추가
-    //   4. 채굴 시작!
     pub fn mine_pending(&mut self, miner_address: &str) {
         self.adjust_difficulty();
 
         let reward = self.current_block_reward();
-
-        // 코인베이스 거래를 맨 앞에 추가 (채굴자에게 보상)
         let coinbase = Transaction::coinbase(miner_address, reward);
 
-        // 대기 중인 거래를 가져오고, 멤풀을 비운다.
-        // max_transactions_per_block만큼만 가져온다 (나머지는 다음 블록에서).
-        // .drain(..) — 배열에서 요소를 꺼내면서 원본 배열을 비운다.
-        //              JavaScript의 splice(0)와 비슷하다.
+        // 코인베이스 거래의 잔액도 캐시에 반영
+        self.apply_transaction_to_cache(&coinbase);
+
         let max_tx = self.config.max_transactions_per_block;
         let take_count = self.pending_transactions.len().min(max_tx);
         let mut transactions: Vec<Transaction> = vec![coinbase];
+
+        // 멤풀의 거래들은 add_transaction()에서 이미 캐시에 반영됐으므로
+        // 여기서는 캐시 업데이트 없이 거래만 옮긴다.
         transactions.extend(self.pending_transactions.drain(..take_count));
 
         let previous_hash = self.latest_block().hash.clone();
@@ -246,7 +228,6 @@ impl Blockchain {
         true
     }
 
-    // 전체 체인 출력 — 이제 거래 내역도 보여준다
     pub fn print_chain(&self) {
         println!(
             "=== Visual Bitcoin Engine (difficulty: {}) ===",
@@ -262,7 +243,6 @@ impl Blockchain {
             );
             println!("  │  full_hash: {}", block.hash);
 
-            // 각 거래를 출력
             for tx in &block.transactions {
                 println!("  │  📄 {tx}");
             }
