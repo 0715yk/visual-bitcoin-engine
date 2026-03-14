@@ -11,19 +11,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct Block {
     pub id: u64,
     pub timestamp: u64,
-
-    // [CHANGED] data: String → transactions: Vec<Transaction>
-    // 이제 블록 하나에 여러 거래를 담을 수 있다.
-    // 실제 비트코인 블록에도 수천 건의 거래가 들어있다.
     pub transactions: Vec<Transaction>,
-
     pub previous_hash: String,
     pub hash: String,
     pub nonce: u64,
 }
 
 impl Block {
-    // 채굴! 거래 목록을 받아서 블록을 만든다.
     pub fn mine(
         id: u64,
         transactions: Vec<Transaction>,
@@ -37,8 +31,8 @@ impl Block {
 
         let target = "0".repeat(difficulty);
 
-        // 거래 목록을 해시 입력용 문자열로 변환
-        // 모든 거래의 내용을 이어붙여서 하나의 문자열로 만든다.
+        // 모든 거래의 해시 문자열을 이어붙인다
+        // UTXO 모델에서는 각 거래의 inputs/outputs 정보가 들어간다
         let tx_data = Block::transactions_to_string(&transactions);
 
         let mut nonce: u64 = 0;
@@ -66,14 +60,14 @@ impl Block {
         }
     }
 
-    // 거래 목록을 하나의 문자열로 변환 (해시 계산용)
-    // 예: "Alice->Bob:10|Bob->Charlie:3|COINBASE->Miner:50"
+    /// 거래 목록 → 해시 입력 문자열
+    /// UTXO 구조에서는 각 거래의 inputs/outputs 정보를 포함한다
     fn transactions_to_string(transactions: &[Transaction]) -> String {
         transactions
-            .iter()                           // 배열의 각 요소를 하나씩 꺼냄
-            .map(|tx| tx.to_hash_string())    // 각 거래를 문자열로 변환
-            .collect::<Vec<String>>()         // 변환 결과를 배열로 모음
-            .join("|")                        // "|"로 이어붙임
+            .iter()
+            .map(|tx| tx.to_hash_string())
+            .collect::<Vec<String>>()
+            .join("|")
     }
 
     pub fn calculate_hash(
@@ -97,7 +91,6 @@ impl Block {
         hex_string
     }
 
-    // 검증용: 현재 블록의 필드들로 해시를 다시 계산
     pub fn recalculate_hash(&self) -> String {
         let tx_data = Block::transactions_to_string(&self.transactions);
         Block::calculate_hash(
@@ -110,7 +103,6 @@ impl Block {
     }
 }
 
-// Display — 블록 출력 형식
 impl std::fmt::Display for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
