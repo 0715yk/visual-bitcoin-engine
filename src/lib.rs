@@ -19,6 +19,11 @@ pub mod time;
 pub mod transaction;
 pub mod utxo;
 
+// 계정모델 CLI 데모용 지갑(secp256k1 서명). 브라우저(wasm)에서는 rand 의존성을
+// 피하기 위해 제외한다. (브라우저용 서명은 utxo.rs가 getrandom으로 직접 처리)
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wallet;
+
 // 브라우저(wasm) 타겟으로 컴파일할 때만 WASM 바인딩을 포함한다.
 // 네이티브(CLI) 빌드에서는 이 모듈이 통째로 제외되므로
 // wasm-bindgen 같은 의존성이 필요 없다.
