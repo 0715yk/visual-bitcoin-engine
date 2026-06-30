@@ -9,7 +9,8 @@
 
 // Debug: println!("{:?}") 가능
 // Clone: .clone()으로 복사 가능
-#[derive(Debug, Clone)]
+// Serialize: 브라우저(JS)로 넘길 수 있도록 JSON 변환 가능
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Transaction {
     // 보내는 사람 (지갑 주소 또는 이름)
     // "COINBASE"이면 채굴 보상 거래 (새 코인 생성)

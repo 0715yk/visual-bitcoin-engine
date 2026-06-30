@@ -9,7 +9,8 @@
 
 // #[derive(Clone)]을 붙여서 Config를 복사할 수 있게 한다.
 // Blockchain에 넘길 때 소유권 이동 없이 복사본을 줄 수 있다.
-#[derive(Clone)]
+// Serialize: 브라우저(JS)로 설정값을 넘길 수 있게 한다.
+#[derive(Clone, serde::Serialize)]
 pub struct ChainConfig {
     // --- 채굴 관련 ---
 

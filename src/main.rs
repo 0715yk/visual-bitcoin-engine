@@ -2,14 +2,12 @@
 // main.rs — 프로그램의 시작점
 // ============================================================
 
-mod block;
-mod blockchain;
-mod config;
-mod transaction;
-
-use blockchain::Blockchain;
-use config::ChainConfig;
-use transaction::Transaction;
+// 엔진 로직은 모두 라이브러리(lib.rs)로 옮겼다.
+// 이 바이너리는 라이브러리를 가져다 쓰는 "사용자"일 뿐이다.
+// (같은 엔진이 브라우저에서는 WebAssembly로 실행된다)
+use visual_bitcoin_engine::blockchain::Blockchain;
+use visual_bitcoin_engine::config::ChainConfig;
+use visual_bitcoin_engine::transaction::Transaction;
 
 fn main() {
     // ============================================================

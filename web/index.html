@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visual Bitcoin Engine — 비트코인 원리 시뮬레이터</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- ============ 헤더 ============ -->
+    <header class="masthead">
+      <div class="logo">₿</div>
+      <div>
+        <h1>Visual Bitcoin Engine</h1>
+        <p>Rust로 만든 비트코인 엔진을 <b>WebAssembly</b>로 컴파일해 브라우저에서 직접 돌려보는 학습 도구</p>
+      </div>
+      <div class="engine-badge" id="engineBadge">
+        <span class="dot"></span><span id="engineStatus">엔진 로딩 중…</span>
+      </div>
+    </header>
+
+    <!-- ============ 탭 ============ -->
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="overview">둘러보기</button>
+      <button class="tab-btn" data-tab="sha">1 · SHA-256 해시</button>
+      <button class="tab-btn" data-tab="mining">2 · 채굴 실험실 (PoW)</button>
+      <button class="tab-btn" data-tab="chain">3 · 블록체인 시뮬레이터</button>
+      <button class="tab-btn" data-tab="utxo">4 · UTXO 모델</button>
+      <button class="tab-btn" data-tab="anatomy">5 · 블록 해부</button>
+    </nav>
+
+    <!-- ============================================================
+         탭 0: 둘러보기
+         ============================================================ -->
+    <section class="tab-panel active" id="tab-overview">
+      <div class="card">
+        <h2>비트코인은 결국 "해시로 연결된 거래 장부"예요</h2>
+        <p class="lead">아래 5개 부품이 어떻게 맞물리는지 차례대로 직접 만져보면, "비트코인이 왜 위조가 안 되는가"가 손에 잡혀요.</p>
+        <div class="flow">
+          <div class="node"><div class="n">부품 1</div><div class="t">SHA-256 해시</div><div class="d">어떤 데이터든 64자리 지문으로. 되돌릴 수 없음(단방향).</div></div>
+          <div class="node"><div class="n">부품 2</div><div class="t">블록</div><div class="d">거래 묶음 + 이전 블록의 해시 + nonce.</div></div>
+          <div class="node"><div class="n">부품 3</div><div class="t">채굴 (PoW)</div><div class="d">해시가 0으로 시작하게 만드는 nonce 찾기 = 일(work).</div></div>
+          <div class="node"><div class="n">부품 4</div><div class="t">거래 · 잔액</div><div class="d">없는 돈은 못 보냄. 이중지불 방지.</div></div>
+          <div class="node"><div class="n">부품 5</div><div class="t">검증 · 위변조</div><div class="d">한 글자만 바꿔도 모든 해시가 깨짐.</div></div>
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>여기서 진짜로 돌아가는 것</h3>
+          <ul class="tight">
+            <li>화면의 모든 계산(<b>SHA-256, 채굴, 잔액 검증, 체인 검증</b>)은 <code class="mono">src/</code> 의 <b>Rust 엔진</b>이 합니다.</li>
+            <li>그 Rust 코드를 <b>WebAssembly(.wasm)</b> 로 컴파일해서 브라우저 안에서 실행해요. JavaScript는 그림만 그립니다.</li>
+            <li>즉, CLI에서 <code class="mono">cargo run</code> 으로 돌던 그 엔진이 <b>그대로</b> 웹에서 돕니다.</li>
+          </ul>
+          <div class="callout why">
+            <b>왜 WASM인가?</b> 브라우저는 Rust를 바로 못 돌리고 JS/WASM만 실행해요. Rust→WASM으로 컴파일하면 "진짜 엔진"을 웹에서 그대로 쓸 수 있습니다.
+          </div>
+        </div>
+        <div class="card">
+          <h3>추천 학습 순서</h3>
+          <ul class="tight">
+            <li><b>1 · SHA-256</b> — 글자 하나만 바꿔도 지문이 완전히 달라지는 걸 눈으로 보기 (눈사태 효과).</li>
+            <li><b>2 · 채굴 실험실</b> — 난이도를 올리면 왜 채굴이 기하급수적으로 어려워지는지 체감.</li>
+            <li><b>3 · 블록체인 시뮬레이터</b> — 거래를 만들고 블록을 채굴해 체인을 키운 뒤, 블록을 몰래 조작해 보고 검증으로 잡아내기.</li>
+          </ul>
+          <div class="callout">소스 구조: <code class="mono">block.rs</code>(해시·채굴) · <code class="mono">transaction.rs</code>(거래) · <code class="mono">blockchain.rs</code>(체인·잔액·검증) · <code class="mono">config.rs</code>(설정) · <code class="mono">wasm_api.rs</code>(브라우저 다리)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 1: SHA-256
+         ============================================================ -->
+    <section class="tab-panel" id="tab-sha">
+      <div class="card">
+        <h2>SHA-256 — 모든 것의 출발점</h2>
+        <p class="lead">아무 글자나 입력해 보세요. 입력이 1바이트든 1메가든, 결과는 <b>항상 64자리 16진수(256비트)</b>입니다.</p>
+        <label class="field">입력 (원하는 대로 바꿔보세요)
+          <input id="shaInput" value="bitcoin" />
+        </label>
+        <h3>SHA-256 해시 결과</h3>
+        <div class="hash" id="shaOutput"></div>
+        <div class="row small muted" style="margin-top:10px">
+          <span>길이: <b id="shaLen" class="mono">—</b> 자 (16진수)</span>
+          <span>= <b class="mono">256</b> 비트</span>
+        </div>
+        <div class="callout why">
+          <b>단방향(one-way):</b> 해시에서 원본을 역으로 계산하는 공식은 존재하지 않아요. 스크램블한 계란을 다시 못 되돌리는 것과 같습니다. 비트코인 보안의 토대죠.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>눈사태 효과 (Avalanche Effect)</h2>
+        <p class="lead">한 글자만 바꿔도 결과의 절반 가까운 비트가 뒤집힙니다. 두 입력을 비교해 보세요.</p>
+        <div class="grid cols-2">
+          <label class="field">입력 A
+            <input id="avA" value="hello" />
+          </label>
+          <label class="field">입력 B
+            <input id="avB" value="hello!" />
+          </label>
+        </div>
+        <h3>해시 A</h3>
+        <div class="hash" id="avHashA"></div>
+        <h3>해시 B <span class="small muted">(A와 다른 자리는 빨간색)</span></h3>
+        <div class="hash" id="avHashB"></div>
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <div class="stat blue" style="max-width:220px">
+            <div class="k">다른 16진수 자릿수</div>
+            <div class="v"><span id="avDiffCount">0</span><small> / 64</small></div>
+          </div>
+          <div class="callout" style="flex:1; margin:0;">
+            입력은 <span class="mono" id="avDelta">한 글자</span>밖에 안 다른데 해시는 거의 무작위로 달라지죠. 그래서 블록 안의 거래를 살짝만 고쳐도 해시가 완전히 어긋나 <b>즉시 들통</b>납니다.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 2: 채굴 실험실
+         ============================================================ -->
+    <section class="tab-panel" id="tab-mining">
+      <div class="card">
+        <h2>채굴 = "조건을 만족하는 nonce 찾기" 노가다</h2>
+        <p class="lead">
+          블록 데이터는 그대로 두고 <span class="mono">nonce</span>(숫자)만 0,1,2,… 바꿔가며 해시를 다시 계산해요.
+          해시가 <b>0이 N개</b>로 시작하면 성공. 정답을 찾는 빠른 방법은 없고 오직 <b>무차별 대입</b>뿐입니다.
+        </p>
+        <div class="row">
+          <label class="field grow">블록 데이터 (해시할 내용)
+            <input id="powData" value="Block: Satoshi -> You : 50 BTC" />
+          </label>
+          <label class="field">난이도 (앞자리 0의 개수)
+            <input id="powDiff" type="range" min="1" max="6" value="3" />
+          </label>
+          <div class="stat btc" style="max-width:90px"><div class="k">난이도</div><div class="v" id="powDiffVal">3</div></div>
+        </div>
+        <div class="row" style="margin-top:12px; align-items:center;">
+          <button class="btn primary" id="powStart">⛏ 채굴 시작</button>
+          <button class="btn ghost" id="powStop" disabled>중지</button>
+          <span class="small muted" id="powHint">목표: 해시가 <b class="mono" id="powTarget">000</b>… 으로 시작해야 합니다.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>채굴기</h3>
+        <div class="miner-stage">
+          <div class="miner-target">현재 해시 입력: <span class="mono" id="powPreimage">—</span></div>
+          <div class="miner-hash" id="powHash">—</div>
+          <div class="miner-stats">
+            <div class="ms"><div class="k">시도한 nonce</div><div class="v" id="powNonce">0</div></div>
+            <div class="ms"><div class="k">해시 계산 횟수</div><div class="v" id="powAttempts">0</div></div>
+            <div class="ms"><div class="k">속도 (해시/초)</div><div class="v" id="powRate">0</div></div>
+            <div class="ms"><div class="k">경과</div><div class="v" id="powElapsed">0.0s</div></div>
+          </div>
+        </div>
+
+        <h3>노가다 로그 <span class="pill-tag">nonce를 1씩 올리며 해시를 다시 계산</span></h3>
+        <p class="lead small">한 줄 = 한 번의 시도예요. <code class="mono">데이터 + nonce</code> 를 SHA-256에 넣어 본 결과죠. 앞에 0이 모자라면 ❌, 목표만큼 0으로 시작하면 ✅. 정답을 미리 알 방법이 없어서 <b>0번부터 하나씩 무작정 대입</b>하는 게 전부입니다.</p>
+        <div class="console" id="powLog"><div class="line init">⛏ 채굴을 시작하면 시도 과정이 여기 한 줄씩 찍힙니다.</div></div>
+
+        <div class="callout why" style="margin-top:16px">
+          <b>왜 이게 보안이 되나요?</b> 난이도를 1 올리면 평균 시도 횟수가 약 <b>16배</b>로 늘어요(16진수라서). 블록을 위조하려면 그 블록부터 끝까지 <b>전부 다시 채굴</b>해야 하는데, 정직한 네트워크의 계산력을 따라잡지 못하면 불가능합니다. 반면 검증은 해시 한 번이면 끝 — <b>찾기는 어렵고 확인은 쉽다.</b>
+        </div>
+        <div id="powHistory" class="small muted"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 3: 블록체인 시뮬레이터
+         ============================================================ -->
+    <section class="tab-panel" id="tab-chain">
+      <!-- 설정 -->
+      <div class="card">
+        <h2>① 엔진 설정</h2>
+        <p class="lead">프리셋을 고르거나 값을 직접 바꾼 뒤 엔진을 시작하세요. (제네시스 블록이 채굴되며 시작됩니다)</p>
+        <div class="row">
+          <label class="field"><span class="lbl-row">프리셋 <span class="hint" title="여러 설정값을 한 번에 채워주는 묶음입니다. '교육용'은 값을 작게 줄여 몇 초 안에 반감기·난이도조정을 체험하고, '비트코인'은 실제 네트워크 값을 채웁니다. 값을 직접 바꾸면 '커스텀'이 됩니다.">?</span></span>
+            <select id="preset">
+              <option value="educational">교육용 (빠른 체험)</option>
+              <option value="bitcoin">실제 비트코인 값</option>
+              <option value="custom">커스텀</option>
+            </select>
+          </label>
+          <label class="field"><span class="lbl-row">초기 난이도 <span class="hint" title="채굴에 성공하려면 해시 앞에 와야 하는 0(16진수)의 개수입니다. 1 늘어날 때마다 평균 시도 횟수가 약 16배로 폭증해요. 시작값이며, 아래 '난이도조정' 주기마다 자동으로 바뀔 수 있습니다. 비트코인 최초값은 1.">?</span></span> <input id="cfgDiff" type="number" min="1" max="6" value="2" style="width:90px"></label>
+          <label class="field"><span class="lbl-row">보상(BTC) <span class="hint" title="블록을 채굴한 사람이 받는 새로 발행되는 코인(코인베이스 거래)입니다. 비트코인은 2009년 50 BTC로 시작해 반감기를 거쳐 현재 3.125 BTC.">?</span></span> <input id="cfgReward" type="number" min="0" step="0.1" value="50" style="width:90px"></label>
+          <label class="field"><span class="lbl-row">반감기(블록) <span class="hint" title="채굴 보상이 절반으로 줄어드는 주기입니다. 예: 10이면 10블록마다 50→25→12.5… 로 감소. 발행량(인플레이션)을 줄이는 장치예요. 비트코인은 21만 블록(약 4년)마다.">?</span></span> <input id="cfgHalving" type="number" min="1" value="10" style="width:100px"></label>
+          <label class="field"><span class="lbl-row">난이도조정(블록) <span class="hint" title="난이도를 다시 계산하는 주기입니다. 이 블록 수마다 '최근 블록들이 목표시간보다 빨리/느리게 나왔나'를 보고 난이도를 올리거나 내려요. 블록 생성 '속도'를 일정하게 유지하는 장치(반감기와 다름). 비트코인은 2016블록(약 2주).">?</span></span> <input id="cfgAdjust" type="number" min="1" value="4" style="width:110px"></label>
+          <label class="field"><span class="lbl-row">목표시간(초) <span class="hint" title="블록 1개가 만들어지길 바라는 평균 시간입니다. 실제가 이보다 빠르면 난이도를 올리고, 느리면 내려서 속도를 맞춰요. 비트코인은 600초(10분).">?</span></span> <input id="cfgTarget" type="number" min="1" value="3" style="width:100px"></label>
+          <label class="field"><span class="lbl-row">블록당 최대거래 <span class="hint" title="한 블록에 담을 수 있는 거래(코인베이스 제외)의 최대 개수입니다. 멤풀에 이보다 많아도 한 블록엔 이만큼만 들어가요. 비트코인은 용량 기준 대략 2~3천 건.">?</span></span> <input id="cfgMaxTx" type="number" min="1" value="10" style="width:110px"></label>
+          <button class="btn primary" id="engineStart">엔진 새로 시작</button>
+        </div>
+      </div>
+
+      <!-- 통계 -->
+      <div class="card">
+        <div class="stats">
+          <div class="stat blue"><div class="k">블록 높이 <span class="hint" title="체인에 쌓인 블록 개수입니다. 제네시스(#0)부터 셉니다. 높이 3 = 블록 #0,#1,#2 존재.">?</span></div><div class="v" id="stHeight">0</div></div>
+          <div class="stat btc"><div class="k">현재 난이도 <span class="hint" title="지금 채굴에 필요한 해시 앞 0의 개수. '난이도조정' 주기마다 자동으로 바뀝니다.">?</span></div><div class="v" id="stDiff">0</div></div>
+          <div class="stat green"><div class="k">현재 블록 보상 <span class="hint" title="지금 채굴하면 받는 코인 양. 반감기를 지날 때마다 절반으로 줄어듭니다.">?</span></div><div class="v" id="stReward">0<small> BTC</small></div></div>
+          <div class="stat"><div class="k">멤풀 대기 거래 <span class="hint" title="승인됐지만 아직 블록에 담기지 않고 대기 중인 거래 수. 채굴하면 이 거래들이 블록에 들어갑니다.">?</span></div><div class="v" id="stMempool">0</div></div>
+          <div class="stat btc"><div class="k">총 발행량 <span class="hint" title="지금까지 채굴 보상으로 새로 만들어진 코인의 총합(모든 잔액의 합). 거래는 코인을 이동만 시키므로 총량은 채굴로만 늘어납니다.">?</span></div><div class="v" id="stSupply">0<small> BTC</small></div></div>
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <!-- 거래 만들기 -->
+        <div class="card">
+          <h2>② 거래 만들기</h2>
+          <p class="lead">보내는 사람의 잔액이 부족하면 엔진이 거부해요(이중지불 방지).</p>
+          <div class="row">
+            <label class="field grow"><span class="lbl-row">보내는 사람 <span class="hint" title="코인을 보내는 주소(이름). 이 사람의 잔액이 보내려는 금액보다 적으면 거래가 거부됩니다. 잔액을 가지려면 먼저 이 사람으로 채굴하거나, 이 사람이 받은 거래가 있어야 해요.">?</span></span>
+              <input id="txFrom" list="addrList" value="Miner1" />
+            </label>
+            <label class="field grow"><span class="lbl-row">받는 사람 <span class="hint" title="코인을 받는 주소(이름). 아무 이름이나 새로 적어도 됩니다(지갑이 자동 생성되는 셈).">?</span></span>
+              <input id="txTo" list="addrList" value="Alice" />
+            </label>
+            <label class="field"><span class="lbl-row">금액(BTC) <span class="hint" title="보낼 코인 양. 0보다 커야 하고, 보내는 사람의 잔액 이하여야 승인됩니다.">?</span></span>
+              <input id="txAmount" type="number" min="0" step="0.1" value="20" style="width:100px" />
+            </label>
+          </div>
+          <datalist id="addrList"></datalist>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" id="txAdd">멤풀에 거래 추가</button>
+            <span class="small muted" id="txMsg"></span>
+          </div>
+          <h3>멤풀 (다음 블록에 담길 거래)</h3>
+          <div class="tx-list" id="mempool"><div class="empty">아직 대기 중인 거래가 없습니다.</div></div>
+        </div>
+
+        <!-- 잔액 -->
+        <div class="card">
+          <h2>지갑 잔액</h2>
+          <p class="lead">채굴 보상(코인베이스)과 거래로 잔액이 바뀝니다.</p>
+          <div class="balances" id="balances"><div class="empty">아직 잔액이 없습니다. 블록을 채굴해 보세요.</div></div>
+        </div>
+      </div>
+
+      <!-- 채굴 -->
+      <div class="card">
+        <h2>③ 블록 채굴</h2>
+        <p class="lead">멤풀의 거래들을 모아 새 블록을 채굴합니다. 맨 앞에는 채굴 보상(코인베이스) 거래가 자동으로 들어가요.</p>
+        <div class="row">
+          <label class="field grow"><span class="lbl-row">채굴자 주소 (보상 받을 사람) <span class="hint" title="이 블록을 채굴해서 보상(코인베이스)을 받을 주소입니다. 새 코인은 항상 이 채굴 과정에서만 생겨요.">?</span></span>
+            <input id="minerAddr" value="Miner1" />
+          </label>
+          <button class="btn primary" id="mineBtn">⛏ 채굴 시작</button>
+        </div>
+        <div class="miner-stage" id="chainMiner" style="margin-top:14px; display:none">
+          <div class="miner-target">목표 <b id="cmTarget">00</b>… · 채굴 중 <span class="spin">⛏</span></div>
+          <div class="miner-hash" id="cmHash">—</div>
+          <div class="miner-stats">
+            <div class="ms"><div class="k">nonce</div><div class="v" id="cmNonce">0</div></div>
+            <div class="ms"><div class="k">시도</div><div class="v" id="cmAttempts">0</div></div>
+            <div class="ms"><div class="k">속도</div><div class="v" id="cmRate">0</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 체인 + 검증 -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <h2 style="margin:0">④ 블록체인 & 검증</h2>
+          <div class="row">
+            <button class="btn green" id="validateBtn">🔍 체인 검증</button>
+          </div>
+        </div>
+        <div id="verdict" style="margin:14px 0; display:none"></div>
+        <div class="callout warn">
+          <b>위변조 실험:</b> 아래 채굴된 블록의 거래 옆 <span class="kbd">조작</span> 버튼을 누르면 금액/수신자를 몰래 바꿉니다. 해시는 다시 계산하지 않으므로, <b>체인 검증</b>을 누르면 어디가 조작됐는지 즉시 잡혀요. (복구하려면 엔진을 새로 시작)
+        </div>
+        <div class="chain" id="chain"></div>
+      </div>
+
+      <!-- 엔진 로그 -->
+      <div class="card">
+        <h2>엔진 로그 <span class="pill-tag">Rust가 출력하는 메시지</span></h2>
+        <p class="lead small">CLI에서 <code class="mono">println!</code> 으로 찍히던 그 메시지를 브라우저로 그대로 가져온 거예요.</p>
+        <div class="console" id="console"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 4: UTXO 모델
+         ============================================================ -->
+    <section class="tab-panel" id="tab-utxo">
+      <div class="card">
+        <h2>비트코인엔 "잔액"이 없어요 — 동전(UTXO)만 있습니다</h2>
+        <p class="lead">3번 탭은 <b>계좌식</b>(Alice=20, Bob=10처럼 잔액을 기억)이었어요. 하지만 진짜 비트코인은 잔액을 저장하지 않고, <b>"아직 안 쓴 거래 출력(UTXO)"</b> 조각들만 둡니다. 지갑이 그걸 다 더해 잔액을 <i>계산</i>할 뿐이죠.</p>
+        <div class="callout why">
+          <b>지폐 비유:</b> 지갑에 5만원권 한 장이 있을 때 1.2만원을 내려면? 5만원을 <b>통째로 내고</b> → 상대는 1.2만원, 나는 <b>거스름돈 3.8만원</b>을 새로 받죠. "잔액에서 빼기"가 아니라 <b>헌 동전 소비 + 새 동전 발행</b>입니다. 이 "새 동전"이 바로 UTXO예요.
+        </div>
+        <ul class="tight">
+          <li><b>입력(input)</b> = 소비할 기존 UTXO들 (반드시 통째로)</li>
+          <li><b>출력(output)</b> = 새로 생기는 UTXO (받는 사람 몫 + 거스름돈)</li>
+          <li><b>수수료(fee)</b> = 입력 합계 − 출력 합계 → 채굴자 몫</li>
+        </ul>
+        <div class="callout key">
+          <b>🔑 그런데 — 그 동전이 "내 것"인 건 어떻게 증명하죠?</b> 각 UTXO는 받는 사람의 <b>주소</b>(= 공개키를 해시한 값)에 <b>잠겨</b> 있어요.
+          그 동전을 쓰려면 짝이 되는 <b>개인키로 거래에 서명</b>해서 "내가 주인이다"를 증명해야 합니다.
+          누구나 <b>공개키로 서명을 검증</b>할 수 있지만, 개인키 없이는 유효한 서명을 <b>만들 수 없어요</b>.
+          이게 바로 비트코인이 실제로 쓰는 <b>secp256k1 ECDSA 디지털 서명</b>입니다. (이 데모는 진짜 secp256k1로 동작해요.)
+        </div>
+      </div>
+
+      <!-- 지갑(키쌍) -->
+      <div class="card">
+        <h2>지갑 (키쌍) <span class="pill-tag">secp256k1</span></h2>
+        <p class="lead small">발행/송금에 처음 등장하는 이름마다 <b>개인키·공개키 한 쌍</b>이 자동 생성돼요. <b>주소</b>는 공개키를 해시해 만든 값이고, 동전은 이 주소에 잠깁니다. 개인키는 비밀(엔진 내부에만 존재).</p>
+        <div id="uWallets"><div class="empty">아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.</div></div>
+      </div>
+
+      <div class="grid cols-2">
+        <div class="card">
+          <h2>① 코인 발행 (코인베이스)</h2>
+          <p class="lead">UTXO가 있어야 보낼 수 있어요. 먼저 누군가에게 새 코인을 만들어 줍니다.</p>
+          <div class="row">
+            <label class="field grow"><span class="lbl-row">받을 주소 <span class="hint" title="이 주소로 잠긴 새 UTXO가 하나 생깁니다. 실제로는 채굴 보상(코인베이스)으로만 새 코인이 생겨요.">?</span></span>
+              <input id="uFundAddr" list="uAddrList" value="Alice" />
+            </label>
+            <label class="field"><span class="lbl-row">금액(BTC) <span class="hint" title="발행할 UTXO 한 개의 액면가.">?</span></span>
+              <input id="uFundAmt" type="number" min="0" step="0.1" value="50" style="width:100px" />
+            </label>
+            <button class="btn green" id="uFundBtn">＋ 발행</button>
+          </div>
+          <div class="row small muted" style="margin-top:6px">예시로 한 주소에 여러 번 발행하면, 그 사람 지갑에 동전이 여러 개 쌓입니다(각각이 UTXO).</div>
+        </div>
+
+        <div class="card">
+          <h2>② 송금</h2>
+          <p class="lead">큰 동전부터 골라 <b>목표+수수료</b> 이상이 될 때까지 소비하고, 거스름돈을 돌려받아요.</p>
+          <div class="row">
+            <label class="field grow"><span class="lbl-row">보내는 사람 <span class="hint" title="이 주소의 UTXO들 중에서 큰 것부터 골라 소비합니다.">?</span></span>
+              <input id="uFrom" list="uAddrList" value="Alice" />
+            </label>
+            <label class="field grow"><span class="lbl-row">받는 사람 <span class="hint" title="받는 주소로 새 UTXO(출력)가 생깁니다.">?</span></span>
+              <input id="uTo" list="uAddrList" value="Bob" />
+            </label>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <label class="field"><span class="lbl-row">금액 <span class="hint" title="받는 사람에게 보낼 금액.">?</span></span>
+              <input id="uAmt" type="number" min="0" step="0.1" value="12" style="width:90px" />
+            </label>
+            <label class="field"><span class="lbl-row">수수료 <span class="hint" title="입력합 − 출력합. 채굴자가 가져갑니다. 0도 가능.">?</span></span>
+              <input id="uFee" type="number" min="0" step="0.1" value="0.1" style="width:90px" />
+            </label>
+            <button class="btn primary" id="uSendBtn">↪ 송금</button>
+            <button class="btn ghost" id="uReset">초기화</button>
+          </div>
+          <div class="row small" id="uMsg" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <!-- 거래 내역 다이어그램 -->
+      <div class="card" id="uFlowCard" style="display:none">
+        <h2>방금 거래: 입력 → 출력 <span class="pill-tag" id="uFlowTxid"></span></h2>
+        <div class="utxo-flow">
+          <div>
+            <div class="flow-label">입력 (소비된 UTXO)</div>
+            <div class="coins" id="uFlowInputs"></div>
+            <div class="flow-sum" id="uFlowInSum"></div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div>
+            <div class="flow-label">출력 (새 UTXO)</div>
+            <div class="coins" id="uFlowOutputs"></div>
+            <div class="flow-sum" id="uFlowOutSum"></div>
+          </div>
+        </div>
+        <div class="utxo-eq" id="uFlowEq"></div>
+
+        <!-- 서명 & 검증 -->
+        <div class="sig-box" id="uSigBlock">
+          <div class="sig-title">🔏 디지털 서명 &amp; 검증 <span class="pill-tag">secp256k1 ECDSA</span></div>
+          <div class="sig-steps">
+            <div class="sig-step">
+              <div class="sig-step-no">1</div>
+              <div class="sig-step-body">
+                <div class="sig-step-h">서명 대상 해시 (sighash)</div>
+                <div class="mono small" id="uSigHash"></div>
+                <div class="muted small">거래 내용(입력 출처 + 출력들)을 SHA-256으로 요약한 값. 이걸 서명합니다.</div>
+              </div>
+            </div>
+            <div class="sig-step">
+              <div class="sig-step-no">2</div>
+              <div class="sig-step-body">
+                <div class="sig-step-h">개인키로 서명 — <span id="uSigSigner"></span></div>
+                <div class="mono small" id="uSigSignature"></div>
+                <div class="muted small">서명자의 개인키 + sighash → 서명(64바이트). 개인키 없이는 못 만듭니다.</div>
+              </div>
+            </div>
+            <div class="sig-step">
+              <div class="sig-step-no">3</div>
+              <div class="sig-step-body">
+                <div class="sig-step-h">공개키로 검증</div>
+                <div class="mono small" id="uSigPubkey"></div>
+                <div class="muted small">공개키가 (a) UTXO가 잠긴 주소로 유도되는지, (b) 서명이 sighash와 맞는지 확인.</div>
+              </div>
+            </div>
+          </div>
+          <div class="sig-verdict" id="uSigVerdict"></div>
+        </div>
+      </div>
+
+      <!-- ③ 위조 시도(도둑질) -->
+      <div class="card forge-card">
+        <h2>③ 위조 시도 — 남의 동전 훔치기 🦹</h2>
+        <p class="lead">공격자가 <b>피해자의 UTXO</b>를 자기 앞으로 보내는 거래를 만들어 봅니다. 하지만 공격자는 피해자의 <b>개인키가 없어요</b>. 자기 키로 서명할 수밖에 없고, 그 키의 주소는 피해자 주소와 다르므로 <b>검증에서 거부</b>됩니다.</p>
+        <div class="row">
+          <label class="field grow"><span class="lbl-row">공격자 <span class="hint" title="훔치려는 사람. 자기 개인키로 서명합니다.">?</span></span>
+            <input id="uForgeAttacker" list="uAddrList" value="Hacker" />
+          </label>
+          <label class="field grow"><span class="lbl-row">피해자 <span class="hint" title="이 사람의 UTXO를 빼앗으려 합니다.">?</span></span>
+            <input id="uForgeVictim" list="uAddrList" value="Bob" />
+          </label>
+          <label class="field"><span class="lbl-row">금액 <span class="hint" title="훔치려는 금액.">?</span></span>
+            <input id="uForgeAmt" type="number" min="0" step="0.1" value="10" style="width:90px" />
+          </label>
+          <button class="btn danger" id="uForgeBtn">🦹 훔치기 시도</button>
+        </div>
+        <div class="forge-result" id="uForgeResult"></div>
+      </div>
+
+      <!-- UTXO 풀 -->
+      <div class="card">
+        <h2>UTXO 풀 (현재 안 쓴 모든 동전)</h2>
+        <p class="lead small">주소별로 묶었어요. 각 칩 = UTXO 한 개. <span style="color:var(--blue)">파란 테두리</span>는 거스름돈으로 생긴 UTXO예요. 잔액은 칩들의 합으로 <b>계산</b>됩니다(저장 아님).</p>
+        <div id="uPool"><div class="empty">아직 UTXO가 없습니다. ①에서 코인을 발행해 보세요.</div></div>
+      </div>
+
+      <datalist id="uAddrList"></datalist>
+
+      <div class="card">
+        <h2>엔진 로그 <span class="pill-tag">UTXO 엔진(Rust)</span></h2>
+        <div class="console" id="uConsole"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 5: 블록 해부 (머클트리 · 헤더 · double SHA-256 · target)
+         ============================================================ -->
+    <section class="tab-panel" id="tab-anatomy">
+      <div class="card">
+        <h2>채굴할 때 실제로 해시하는 건 거래가 아니라 "80바이트 헤더"예요</h2>
+        <p class="lead">2·3번 탭에선 설명을 위해 블록 전체를 문자열로 이어붙여 해시했어요. 하지만 진짜 비트코인은 다릅니다. 거래 수천 건은 <b>머클트리</b>로 32바이트 <b>머클루트</b> 하나로 요약하고, 채굴자는 딱 <b>80바이트 헤더</b>만 <b>double SHA-256</b>으로 반복 해시하죠. 그리고 난이도는 "0의 개수"가 아니라 <b>target이라는 256비트 숫자보다 작은가</b>로 판정해요.</p>
+        <div class="callout why">이 탭은 이 4가지(머클트리 · 헤더 · double SHA-256 · target)를 한 흐름으로 직접 만들어 봅니다. 모든 계산은 동일한 Rust 엔진이 합니다.</div>
+      </div>
+
+      <!-- 1. 거래 -> 머클트리 -->
+      <div class="card">
+        <h2>① 거래들 → 머클트리 → 머클루트</h2>
+        <p class="lead small">거래를 한 줄에 하나씩 적어요(내용은 자유). 각 거래를 <b>double SHA-256</b>해 잎(leaf)을 만들고, 둘씩 이어붙여 해시하길 반복해 꼭대기의 <b>루트</b> 하나로 압축합니다. 노드 수가 홀수면 <b>마지막 노드를 복제</b>해 짝을 맞춰요.</p>
+        <textarea id="anTxs" rows="4" spellcheck="false">Alice -> Bob : 5
+Bob -> Carol : 2
+Carol -> Dave : 1
+Coinbase -> Miner : 6.25</textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="anBuildBtn">머클트리 만들기</button>
+          <span class="small muted" id="anMkInfo"></span>
+        </div>
+        <div class="merkle-scroll"><div id="anMerkle" class="merkle"></div></div>
+        <div class="merkle-root-line" id="anRootLine" style="display:none">
+          <span class="mr-label">머클루트</span>
+          <span class="mono mr-val" id="anRoot"></span>
+        </div>
+      </div>
+
+      <!-- 2. 헤더 + target -->
+      <div class="card">
+        <h2>② 블록 헤더(80바이트) 조립 + 목표(target)</h2>
+        <p class="lead small">머클루트와 직전 블록 해시, 난이도를 넣어 헤더를 만듭니다. 헤더는 정확히 6필드 · 80바이트예요.</p>
+        <div class="row">
+          <label class="field grow"><span class="lbl-row">직전 블록 해시 (prev) <span class="hint" title="앞 블록 헤더의 해시. 이게 블록들을 사슬처럼 잇습니다. 첫 블록은 0.">?</span></span>
+            <input id="anPrev" class="mono" value="0000000000000000000000000000000000000000000000000000000000000000" />
+          </label>
+          <label class="field"><span class="lbl-row">난이도(선행 0비트) <span class="hint" title="target = 2^(256-비트수) - 1. 비트가 클수록 target이 작아져 더 어렵습니다. 브라우저에선 16~24 권장(2^비트 ≈ 평균 시도횟수).">?</span></span>
+            <input id="anBits" type="number" min="1" max="28" value="20" style="width:120px" />
+          </label>
+          <button class="btn green" id="anAssembleBtn">헤더 조립</button>
+        </div>
+
+        <div id="anHeaderBox" style="display:none">
+          <div class="hdr-fields" id="anHdrFields"></div>
+          <div class="hdr-serial">
+            <div class="flow-label">직렬화된 헤더 (80바이트 = 160 hex) — <b>이게 채굴이 해시하는 입력</b></div>
+            <div class="mono hdr-hex" id="anHdrHex"></div>
+          </div>
+          <div class="target-box">
+            <div class="flow-label">목표 target (이 숫자보다 <b>작거나 같은</b> 블록해시를 찾아야 함)</div>
+            <div class="mono target-hex" id="anTargetHex"></div>
+            <div class="small muted" id="anExpected"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 채굴 (double SHA-256 + target 비교) -->
+      <div class="card" id="anMineCard" style="display:none">
+        <h2>③ 채굴 — nonce를 바꿔가며 double SHA-256</h2>
+        <p class="lead small">nonce(헤더의 마지막 4바이트)만 1씩 바꿔 헤더를 다시 해시합니다. <b>SHA-256을 두 번</b> 적용한 결과가 target 이하가 될 때까지 반복해요.</p>
+        <div class="row">
+          <button class="btn primary" id="anMineBtn">⛏ 채굴 시작</button>
+          <button class="btn ghost" id="anStopBtn" disabled>멈춤</button>
+          <span class="mining-stat" id="anMineStat"></span>
+        </div>
+
+        <div class="dsha">
+          <div class="dsha-step">
+            <div class="flow-label">헤더 80바이트</div>
+            <div class="mono dsha-cell" id="anDStep0">—</div>
+          </div>
+          <div class="flow-arrow">↓ SHA-256</div>
+          <div class="dsha-step">
+            <div class="flow-label">1차 해시 (중간값)</div>
+            <div class="mono dsha-cell" id="anDStep1">—</div>
+          </div>
+          <div class="flow-arrow">↓ SHA-256 다시</div>
+          <div class="dsha-step">
+            <div class="flow-label">최종 블록 해시</div>
+            <div class="mono dsha-cell big" id="anDStep2">—</div>
+          </div>
+        </div>
+
+        <div class="cmp-box">
+          <div class="cmp-row"><span class="cmp-tag">블록해시</span><span class="mono" id="anCmpHash">—</span></div>
+          <div class="cmp-row"><span class="cmp-tag">target　 </span><span class="mono" id="anCmpTarget">—</span></div>
+          <div class="cmp-verdict" id="anCmpVerdict">아직 채굴 전</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="small muted" style="text-align:center; margin-top:30px">
+      Visual Bitcoin Engine · Rust → WebAssembly · 교육용 시뮬레이터
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

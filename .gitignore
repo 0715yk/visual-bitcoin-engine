@@ -1,2 +1,7 @@
 /target
 *.exe
+
+# wasm-bindgen 생성물 (build-wasm.sh로 재생성)
+/web/pkg
+# Node 스모크 테스트용 임시 바인딩
+/pkgnode
