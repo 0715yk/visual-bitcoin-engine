@@ -1,0 +1,1 @@
+export function web_panic_log(s){ console.error('[wasm panic]', s); }

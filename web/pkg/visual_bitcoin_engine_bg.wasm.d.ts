@@ -1,0 +1,37 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_wasmengine_free: (a: number, b: number) => void;
+export const __wbg_wasmheaderminer_free: (a: number, b: number) => void;
+export const __wbg_wasmutxo_free: (a: number, b: number) => void;
+export const dsha256_steps: (a: number, b: number) => [number, number];
+export const merkle_tree: (a: number, b: number) => [number, number];
+export const pow_preimage: (a: number, b: number, c: bigint) => [number, number];
+export const pow_try: (a: number, b: number, c: number, d: bigint, e: bigint) => [number, number];
+export const sha256: (a: number, b: number) => [number, number];
+export const wasmengine_add_transaction: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+export const wasmengine_begin_mine: (a: number, b: number, c: number) => [number, number];
+export const wasmengine_is_mining: (a: number) => number;
+export const wasmengine_mine_step: (a: number, b: bigint) => [number, number];
+export const wasmengine_new: (a: number, b: bigint, c: bigint, d: number, e: bigint, f: number) => number;
+export const wasmengine_snapshot: (a: number) => [number, number];
+export const wasmengine_take_logs: (a: number) => [number, number];
+export const wasmengine_tamper: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+export const wasmengine_validate: (a: number) => [number, number];
+export const wasmheaderminer_info: (a: number) => [number, number];
+export const wasmheaderminer_new: (a: number, b: number, c: number, d: number, e: number) => number;
+export const wasmheaderminer_step: (a: number, b: number) => [number, number];
+export const wasmutxo_forge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+export const wasmutxo_fund: (a: number, b: number, c: number, d: number) => [number, number];
+export const wasmutxo_new: () => number;
+export const wasmutxo_send: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+export const wasmutxo_snapshot: (a: number) => [number, number];
+export const wasmutxo_take_logs: (a: number) => [number, number];
+export const start: () => void;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;

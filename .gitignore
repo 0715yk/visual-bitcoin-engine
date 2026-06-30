@@ -1,7 +1,8 @@
 /target
 *.exe
 
-# wasm-bindgen 생성물 (build-wasm.sh로 재생성)
-/web/pkg
 # Node 스모크 테스트용 임시 바인딩
 /pkgnode
+
+# 참고: web/pkg(컴파일된 wasm)는 Vercel 정적 배포를 위해 일부러 커밋한다.
+# (build-wasm.sh 로 재생성 가능하지만, Vercel에는 Rust 툴체인이 없으므로 산출물을 올린다)
