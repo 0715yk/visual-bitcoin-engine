@@ -20,6 +20,11 @@ pub struct Block {
     pub previous_hash: String,
     pub hash: String,
     pub nonce: u64,
+
+    // 이 블록이 채굴된 난이도(요구 선행 0의 개수).
+    // 난이도는 조정될 수 있으므로 블록마다 "그때의 난이도"를 저장해둔다.
+    // (실제 비트코인 헤더의 bits 필드에 해당) → 검증 때 PoW 확인에 사용.
+    pub difficulty: usize,
 }
 
 impl Block {
@@ -195,6 +200,7 @@ impl MiningCandidate {
                     previous_hash: self.previous_hash.clone(),
                     hash,
                     nonce: self.nonce,
+                    difficulty: self.difficulty,
                 });
             }
 

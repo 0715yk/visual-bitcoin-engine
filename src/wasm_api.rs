@@ -205,6 +205,12 @@ impl WasmEngine {
         self.bc
             .tamper_transaction(block_index, tx_index, new_to, new_amount)
     }
+
+    // 조작 + 해시 재계산(채굴은 생략). 검증 ①은 통과하지만 ③(PoW)에서 걸린다.
+    pub fn tamper_rehash(&mut self, block_index: usize, tx_index: usize, new_to: &str, new_amount: f64) -> bool {
+        self.bc
+            .tamper_and_rehash(block_index, tx_index, new_to, new_amount)
+    }
 }
 
 // ============================================================
@@ -317,6 +323,7 @@ fn send_result_json(r: &SendResult) -> String {
             v
         }).collect::<Vec<_>>(),
         // --- 서명/검증 정보 (Phase 2) ---
+        "message": r.message,
         "sighash": r.sighash,
         "signature": r.signature,
         "pubkey": r.pubkey,

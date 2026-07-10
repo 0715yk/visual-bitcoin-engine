@@ -116,6 +116,40 @@
           </div>
         </div>
       </div>
+
+      <!-- ============ 그래서 이 해시로 뭘 하나: 블록 연결 ============ -->
+      <div class="card">
+        <h2>그래서 이걸로 뭘 하냐면 — 블록과 블록을 "해시로" 잇습니다</h2>
+        <p class="lead">
+          비트코인의 핵심 아이디어예요. 각 블록은 <b>자기 데이터</b>뿐 아니라 <b>바로 앞 블록의 해시</b>까지 함께 SHA-256에 넣습니다.
+          그래서 블록들이 사슬(chain)처럼 이어져요 — 이게 <b>블록체인</b>이라는 이름의 유래죠.
+        </p>
+        <div class="callout why">
+          <b>계산식:</b> <span class="mono">이 블록 해시 = SHA-256( 이전 블록 해시 + 데이터 + nonce )</span>
+          <br>맨 앞(제네시스) 블록은 앞이 없으니 이전 해시를 <span class="mono">0000…</span> 으로 둡니다.
+          <br><b>nonce</b>는 채굴자가 바꾸는 숫자예요. <b>⛏ 채굴</b> 버튼을 누르면 <b>해시 앞이 0으로 시작</b>할 때까지 nonce를 자동으로 찾습니다(= 탭 2에서 본 그 작업증명).
+          <br>이렇게 찾은 nonce는 앞서 말한 대로 그 <b>블록 해시를 확정</b>하는 데 쓰여요. 그래서 데이터를 하나라도 <b>조작하면 → 블록 해시가 바뀌고 → 그 블록을 기점으로 뒤의 모든 블록을 다시 채굴</b>(nonce 다시 찾기)해야 합니다. <b>이게 조작이 어려운 이유예요.</b> 아래에서 직접 확인해 보세요. 👇
+        </div>
+        <p class="lead small" style="margin-bottom:8px">👉 아래 블록의 <b>데이터를 고치거나 ⛏ 채굴을 눌러보세요.</b> 그 블록 해시가 바뀌면, 그걸 품고 있던 <b>뒤 블록들의 해시가 줄줄이 다시 계산</b>돼요(주황색 반짝임). 채굴해둔 뒤 블록이 있었다면 <b>0으로 시작하던 게 깨지는 것</b>도 보입니다.</p>
+        <div class="minichain" id="mcChain"></div>
+        <div class="callout warn">
+          <b>그래서 위조가 안 됩니다:</b> 지난 블록의 데이터를 하나만 몰래 바꿔도, 그 뒤 <b>모든 블록의 해시가 어긋나</b> 사슬이 끊긴 게 즉시 보여요.
+          공격자는 바꾼 블록부터 끝까지 <b>전부 다시 채굴</b>해야 하는데(탭 2에서 그게 얼마나 힘든지 체감했죠), 정직한 네트워크를 따라잡는 건 사실상 불가능합니다.
+          <br><span class="small muted">→ 실제로 거래를 넣고 채굴해 사슬을 키운 뒤, 블록을 몰래 조작해 검증으로 잡아내는 체험은 <b>탭 3 · 블록체인 시뮬레이터</b>에서.</span>
+        </div>
+
+        <details class="aside">
+          <summary>🧪 곁다리 — "그럼 양자 컴퓨터가 나오면 비트코인 깨지는 거 아냐?"</summary>
+          <div class="aside-body">
+            <p>자주 나오는 얘기예요. 근데 <b>두 가지 위협을 나눠서</b> 봐야 정확합니다.</p>
+            <ul class="tight">
+              <li><b>① 해시 · 채굴 (SHA-256)</b> — 양자의 <b>그로버(Grover) 알고리즘</b>은 이 "0으로 시작하는 nonce 찾기" 같은 무차별 대입을 <b>제곱근(√)만큼</b>만 빨라지게 해요. 256비트가 체감 128비트로 줄 뿐 여전히 천문학적이고, 난이도가 자동 조정돼 흡수됩니다. → 위에서 말한 <b>재채굴을 "가능"하게 만들진 못해요.</b></li>
+              <li><b>② 디지털 서명 (secp256k1 · 탭 4)</b> — 여기가 진짜 급소예요. 양자의 <b>쇼어(Shor) 알고리즘</b>은 <b>공개키에서 개인키를 역산</b>할 수 있어서, 충분히 큰 양자컴이 나오면 남의 서명을 위조해 코인을 훔칠 수 있게 됩니다.</li>
+            </ul>
+            <p>그러니까 양자 컴퓨터가 노리는 건 <b>"해시 연결"보다 "서명" 쪽</b>이에요. 대비책으로 <b>양자내성 서명(post-quantum)</b>으로 갈아타자는 논의가 이미 진행 중이고, 무엇보다 <b>그만한 규모의 양자 컴퓨터는 아직 존재하지 않습니다.</b></p>
+          </div>
+        </details>
+      </div>
     </section>
 
     <!-- ============================================================
@@ -147,6 +181,11 @@
       <div class="card">
         <h3>채굴기</h3>
         <div class="miner-stage">
+          <div class="mining-anim" id="powAnim" hidden>
+            <span class="pick">⛏️</span>
+            <span class="ore">₿</span>
+            <span class="spark"></span>
+          </div>
           <div class="miner-target">현재 해시 입력: <span class="mono" id="powPreimage">—</span></div>
           <div class="miner-hash" id="powHash">—</div>
           <div class="miner-stats">
@@ -164,6 +203,28 @@
         <div class="callout why" style="margin-top:16px">
           <b>왜 이게 보안이 되나요?</b> 난이도를 1 올리면 평균 시도 횟수가 약 <b>16배</b>로 늘어요(16진수라서). 블록을 위조하려면 그 블록부터 끝까지 <b>전부 다시 채굴</b>해야 하는데, 정직한 네트워크의 계산력을 따라잡지 못하면 불가능합니다. 반면 검증은 해시 한 번이면 끝 — <b>찾기는 어렵고 확인은 쉽다.</b>
         </div>
+
+        <details class="aside">
+          <summary>🔎 이 실험실은 쉽게 보여주려고 3가지를 단순화했어요 (실제 비트코인은?)</summary>
+          <div class="aside-body">
+            <p>여긴 브라우저에서 <b>즉시 체감</b>하려고 난이도를 확 낮췄어요(1~6). 실제 비트코인은 이렇게 다릅니다:</p>
+            <ul class="tight">
+              <li><b>① "0 개수"가 진짜 기준이 아니에요</b> — 여기선 "해시 앞 0이 N개"로 판정하지만, 실제론 <b>해시(를 숫자로 본 값)가 <span class="mono">target</span>이라는 256비트 숫자보다 작거나 같은가</b>로 판정해요. 0이 많을수록 작은 수라 결과는 비슷하지만, 이 방식이라 난이도를 <b>0 개수처럼 뚝뚝 끊지 않고 연속적으로</b> 미세 조정할 수 있습니다.</li>
+              <li><b>② SHA-256을 두 번</b> — 여기선 한 번만 하지만, 실제 헤더 채굴은 <span class="mono">SHA-256( SHA-256(헤더) )</span> 즉 <b>double SHA-256</b>이에요.</li>
+              <li><b>③ 난이도는 기하급수적으로 폭증</b> — 요구하는 선행 0이 <b>1비트</b> 늘 때마다 평균 시도 횟수가 <b>2배</b>(16진수 0 한 자리 기준 약 16배)로 뛰어요. 실제 비트코인은 <b>16진수로 약 19자리 이상</b>의 0(약 2⁷⁶ 이상)이 필요해서, 평균 <b>10²²~10²³번</b> 해시해야 블록 하나가 나옵니다.</li>
+            </ul>
+            <p>그래서 이 실험실 속도(초당 수만~수십만)로는 <b>우주 나이로도</b> 못 찾아요. 전 세계 채굴기를 합치면 특수 장비(ASIC)로 <b>초당 약 10²⁰번(= 1억 × 1조)</b> 규모의 해시를 돌려서, 그걸로 <b>평균 10분마다</b> 블록 하나를 캡니다.</p>
+            <p class="small muted">→ target · double SHA-256 · 80바이트 헤더의 정밀한 버전은 <b>탭 5 · 블록 해부</b>에서 실제 hex까지 직접 볼 수 있어요.</p>
+          </div>
+        </details>
+
+        <div class="callout" style="margin-top:16px">
+          <b>⚡ 그럼 이 계산력의 절반 이상을 가지면? = 51% 공격</b><br>
+          방금 본 그 어마어마한 계산력(전 세계 합산)을 <b>혼자 절반 넘게</b> 감당할 수 있다면, 정직한 네트워크보다 <b>빠르게 블록을 쌓아</b> 더 긴 체인을 만들어 과거 거래를 뒤집을 수 있어요. 이게 <b>51% 공격</b>입니다.
+          <br>하지만 ⑴ 그 정도 장비면 <b>정직하게 채굴하는 게 더 이득</b>이고, ⑵ 블록이 깊이 묻힐수록(=컨펌↑) 성공 확률이 <b>기하급수적으로 0에 수렴</b>해서 사실상 불가능해요.
+          <br><span class="small muted">→ "가장 긴 체인이 이긴다" 규칙과 51% 공격을 그림으로 보는 설명은 <b>탭 3 · 블록체인 시뮬레이터</b> 맨 아래 ⑤에서.</span>
+        </div>
+
         <div id="powHistory" class="small muted"></div>
       </div>
     </section>
@@ -205,6 +266,18 @@
         </div>
       </div>
 
+      <!-- 첫 채굴 유도 배너: 아직 아무도 코인이 없을 때만 표시 -->
+      <div class="card first-mine" id="firstMineBanner" style="display:none">
+        <div class="fm-body">
+          <div class="fm-icon">⛏</div>
+          <div class="fm-text">
+            <b>먼저 채굴부터! 아직 아무도 코인이 없어요.</b>
+            <span>비트코인은 <b>채굴</b>로만 새 코인이 태어나요(누가 보내주는 게 아님). 블록을 채굴하면 채굴자 <span class="mono" id="fmMiner">Satoshi</span> 가 <b><span id="fmReward">50</span> BTC</b>를 받아, <b>그때부터 거래를 보낼 수 있습니다.</b></span>
+          </div>
+          <button class="btn primary" id="firstMineBtn">⛏ 첫 블록 채굴하기</button>
+        </div>
+      </div>
+
       <div class="grid cols-2">
         <!-- 거래 만들기 -->
         <div class="card">
@@ -212,7 +285,7 @@
           <p class="lead">보내는 사람의 잔액이 부족하면 엔진이 거부해요(이중지불 방지).</p>
           <div class="row">
             <label class="field grow"><span class="lbl-row">보내는 사람 <span class="hint" title="코인을 보내는 주소(이름). 이 사람의 잔액이 보내려는 금액보다 적으면 거래가 거부됩니다. 잔액을 가지려면 먼저 이 사람으로 채굴하거나, 이 사람이 받은 거래가 있어야 해요.">?</span></span>
-              <input id="txFrom" list="addrList" value="Miner1" />
+              <input id="txFrom" list="addrList" value="Satoshi" />
             </label>
             <label class="field grow"><span class="lbl-row">받는 사람 <span class="hint" title="코인을 받는 주소(이름). 아무 이름이나 새로 적어도 됩니다(지갑이 자동 생성되는 셈).">?</span></span>
               <input id="txTo" list="addrList" value="Alice" />
@@ -244,7 +317,7 @@
         <p class="lead">멤풀의 거래들을 모아 새 블록을 채굴합니다. 맨 앞에는 채굴 보상(코인베이스) 거래가 자동으로 들어가요.</p>
         <div class="row">
           <label class="field grow"><span class="lbl-row">채굴자 주소 (보상 받을 사람) <span class="hint" title="이 블록을 채굴해서 보상(코인베이스)을 받을 주소입니다. 새 코인은 항상 이 채굴 과정에서만 생겨요.">?</span></span>
-            <input id="minerAddr" value="Miner1" />
+            <input id="minerAddr" value="Satoshi" />
           </label>
           <button class="btn primary" id="mineBtn">⛏ 채굴 시작</button>
         </div>
@@ -268,10 +341,67 @@
           </div>
         </div>
         <div id="verdict" style="margin:14px 0; display:none"></div>
+        <div class="callout why">
+          <b>🔍 체인 검증은 뭘 하나요?</b> 제네시스(#0)는 기준점이라 건너뛰고, <b>#1부터 모든 블록</b>에 대해 딱 두 가지를 확인해요:
+          <ul class="tight" style="margin:8px 0 2px">
+            <li><b>① 해시 재계산 일치?</b> — 그 블록의 <b>현재 내용</b>(거래·nonce·이전해시 등)으로 해시를 <b>다시 계산</b>해 저장된 해시와 비교. 다르면 → <b>데이터 조작</b>.</li>
+            <li><b>② 연결 일치?</b> — 그 블록의 <span class="mono">이전 해시</span> 가 진짜 앞 블록의 해시와 같은지 확인. 다르면 → <b>사슬 끊김</b>.</li>
+          </ul>
+          하나라도 어긋나면 <b>어느 블록이 왜 깨졌는지</b> 딱 짚어줘요. 검증은 해시 계산 몇 번이면 끝 — <b>찾기는 어려워도 확인은 순식간.</b>
+        </div>
         <div class="callout warn">
-          <b>위변조 실험:</b> 아래 채굴된 블록의 거래 옆 <span class="kbd">조작</span> 버튼을 누르면 금액/수신자를 몰래 바꿉니다. 해시는 다시 계산하지 않으므로, <b>체인 검증</b>을 누르면 어디가 조작됐는지 즉시 잡혀요. (복구하려면 엔진을 새로 시작)
+          <b>위변조 실험:</b> 아래 채굴된 블록의 거래 옆에 버튼이 두 개 있어요. 둘 다 <b>체인 검증</b>을 누르면 잡히지만, <b>걸리는 지점이 달라요</b>:
+          <ul class="tight" style="margin:8px 0 2px">
+            <li><span class="kbd">조작</span> — 데이터만 바꾸고 <b>해시는 그대로</b>. → 검증 <b>①(해시 불일치)</b>에서 걸림.</li>
+            <li><span class="kbd">조작+재해시</span> — 바꾼 뒤 <b>해시도 다시 계산</b>(채굴은 생략). 해시는 내용과 맞지만 0으로 시작 안 함. → 검증 <b>③(작업증명)</b>에서 걸림. <b>"재해시만으론 부족, 진짜 채굴이 필요"</b>를 보여줘요.</li>
+          </ul>
+          (복구하려면 엔진을 새로 시작)
         </div>
         <div class="chain" id="chain"></div>
+      </div>
+
+      <!-- 왜 못 되돌리나: 가장 긴 체인 & 51% 공격 -->
+      <div class="card">
+        <h2>⑤ 왜 못 되돌리나 — "가장 긴 체인이 이긴다" &amp; 51% 공격</h2>
+        <p class="lead">
+          위에서 블록을 조작하면 검증에 걸리죠. 그럼 공격자가 <b>조작한 블록부터 다시 채굴</b>하면 되지 않을까요?
+          문제는 그러는 <b>동안에도 정직한 네트워크는 계속 블록을 쌓는다</b>는 거예요. 그래서 공격자는 따라잡는 게 아니라 <b>추월</b>해야 합니다.
+        </p>
+
+        <div class="fork">
+          <div class="fork-common">
+            <span class="fk base">#5</span>
+            <span class="fork-note">공격자가 여기(#5)를<br>조작 → 여기서 갈라짐</span>
+          </div>
+          <div class="fork-branches">
+            <div class="fork-row">
+              <span class="fork-lead">├─</span>
+              <span class="fk honest">6</span><span class="fk honest">7</span><span class="fk honest">8</span><span class="fk honest">9</span>
+              <span class="fork-tag ok">✅ 정직한 체인 — 더 길다 → 노드들이 자동으로 이걸 채택</span>
+            </div>
+            <div class="fork-row">
+              <span class="fork-lead">└─</span>
+              <span class="fk attacker">6′</span><span class="fk attacker">7′</span>
+              <span class="fork-tag bad">❌ 공격자 체인 — 짧다 → 버려짐(고아 블록)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout why">
+          <b>노드의 규칙은 딱 하나:</b> <span class="mono">유효한 체인 중 "가장 긴(누적 작업량이 가장 큰)" 것을 따른다.</span>
+          <br>누구에게 <b>허락·투표를 받는 게 아니라</b>, 더 긴 체인이 나타나면 노드들이 <b>알아서 그걸로 갈아탑니다.</b>
+        </div>
+
+        <ul class="tight">
+          <li><b>추월하려면 = 해시파워 51%+</b> — 정직한 네트워크 <b>전체보다 빠르게</b> 블록을 쌓아야 더 긴 체인을 만들 수 있어요. 그건 전 세계 채굴 계산력의 절반 이상을 혼자 가져야 한다는 뜻(수십조 원어치 장비·전기).</li>
+          <li><b>그럴 능력이면 정직하게 채굴이 이득</b> — 공격에 성공해도 신뢰가 무너져 코인 가치가 폭락하니, 차라리 정직하게 보상 받는 게 이득이라 <b>공격 유인 자체가 없어요.</b></li>
+          <li><b>깊이 묻힐수록 안전(컨펌)</b> — 목표 블록 위에 블록이 쌓일수록(=컨펌 수↑) 추월 확률이 <b>기하급수적으로 0에 수렴</b>. 그래서 거래소는 보통 <b>6 컨펌</b>(블록 6개)을 기다립니다.</li>
+        </ul>
+
+        <div class="callout warn">
+          <b>한 줄 요약:</b> 위조 = <b>바꾼 블록부터 끝까지 재채굴 + 정직한 네트워크를 추월할 만큼 더 길게</b> 만들기.
+          노드는 "가장 긴 체인" 규칙으로 판단하므로, 추월하려면 <b>계산력 51% 이상</b>이 필요 → 사실상 불가능합니다.
+        </div>
       </div>
 
       <!-- 엔진 로그 -->
@@ -310,6 +440,39 @@
         <h2>지갑 (키쌍) <span class="pill-tag">secp256k1</span></h2>
         <p class="lead small">발행/송금에 처음 등장하는 이름마다 <b>개인키·공개키 한 쌍</b>이 자동 생성돼요. <b>주소</b>는 공개키를 해시해 만든 값이고, 동전은 이 주소에 잠깁니다. 개인키는 비밀(엔진 내부에만 존재).</p>
         <div id="uWallets"><div class="empty">아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.</div></div>
+      </div>
+
+      <!-- 타원곡선 시각화: 개인키·공개키가 뭔지 그림으로 -->
+      <div class="card">
+        <h2>🎨 그림으로 이해하기 — 개인키·공개키가 대체 뭔데? <span class="muted" style="font-size:13px">(수식 없이)</span></h2>
+        <p class="lead small">공개키·개인키는 <b>타원곡선</b> 위에서 하는 "점 점프 놀이"예요. 시작점 <b>G</b>에서 정해진 규칙(선 긋고 → 만나는 점 → 위아래 뒤집기)으로 점프하는데 — <b>몇 번 점프했는지 = 개인키(비밀)</b>, <b>최종 착지점 = 공개키(공개)</b>. 버튼을 눌러 한 번씩 더해보세요.</p>
+        <div class="curve-wrap">
+          <svg id="curveSvg" viewBox="0 0 520 360" role="img" aria-label="타원곡선 점 덧셈 시각화"></svg>
+        </div>
+        <div class="curve-ctrls">
+          <button class="btn primary" id="curveAdd">＋ G 한 번 더 더하기 (점프!)</button>
+          <button class="btn ghost" id="curveReset">↺ 처음부터</button>
+          <div class="curve-read" id="curveRead"></div>
+        </div>
+        <div class="curve-legend small muted">
+          <span><span class="dot" style="background:#3fb950"></span> G (시작점)</span>
+          <span><span class="dot" style="background:#c9d1d9"></span> 중간 착지점</span>
+          <span><span class="dot" style="background:#f7931a"></span> 지금 착지점 = 공개키 Q</span>
+          <span><span class="dash" style="background:#58a6ff"></span> 선 긋기(덧셈)</span>
+          <span><span class="dash" style="background:#bc8cff"></span> 위아래 뒤집기</span>
+        </div>
+        <div class="callout key" style="margin-top:12px">
+          <b>🔑 여기가 핵심:</b> G에서 <b>d번 점프해 Q에 도착</b>하는 건 쉬워요(그냥 버튼 d번). 하지만 <b>착지점 Q만 보고 "몇 번 점프했게?"(= d)를 알아내는 건 불가능</b>합니다 — 점프가 곡선 위를 마구 튀어다녀서 거꾸로 되짚을 방법이 없거든요.
+          <ul class="tight" style="margin:8px 0 2px">
+            <li><b>개인키 d</b> = 점프 횟수 <span class="muted">(비밀)</span></li>
+            <li><b>공개키 Q</b> = 착지점 <span class="muted">(공개 · = d개의 G를 더한 점)</span></li>
+            <li><b>주소</b> = 공개키 Q를 해시한 값</li>
+          </ul>
+          실제 비트코인 개인키는 이 점프를 <b>2<sup>256</sup></b>(우주의 원자 수보다 많음) 근처 횟수만큼 한 착지점이라, 슈퍼컴을 다 끌어와도 못 되짚어요. 그래서 공개키는 맘껏 공개해도 안전해요.
+        </div>
+        <div class="callout why">
+          <b>그럼 "서명"은?</b> "나는 이 착지점 Q를 만든 <b>점프 횟수 d를 안다</b>"를, <b>d를 한 번도 말하지 않고</b> 증명하는 수학 트릭이 바로 <b>서명</b>이에요. 남들은 <b>공개키 Q로 그 증명이 맞는지 확인(검증)</b>만 하죠. → 개인키 없인 서명을 못 만들고, 만들어진 서명은 공개키로 누구나 검증돼요. (송금할 때 아래 서명 블록에서 이게 실제로 돌아가요.)
+        </div>
       </div>
 
       <div class="grid cols-2">
@@ -371,37 +534,8 @@
         </div>
         <div class="utxo-eq" id="uFlowEq"></div>
 
-        <!-- 서명 & 검증 -->
-        <div class="sig-box" id="uSigBlock">
-          <div class="sig-title">🔏 디지털 서명 &amp; 검증 <span class="pill-tag">secp256k1 ECDSA</span></div>
-          <div class="sig-steps">
-            <div class="sig-step">
-              <div class="sig-step-no">1</div>
-              <div class="sig-step-body">
-                <div class="sig-step-h">서명 대상 해시 (sighash)</div>
-                <div class="mono small" id="uSigHash"></div>
-                <div class="muted small">거래 내용(입력 출처 + 출력들)을 SHA-256으로 요약한 값. 이걸 서명합니다.</div>
-              </div>
-            </div>
-            <div class="sig-step">
-              <div class="sig-step-no">2</div>
-              <div class="sig-step-body">
-                <div class="sig-step-h">개인키로 서명 — <span id="uSigSigner"></span></div>
-                <div class="mono small" id="uSigSignature"></div>
-                <div class="muted small">서명자의 개인키 + sighash → 서명(64바이트). 개인키 없이는 못 만듭니다.</div>
-              </div>
-            </div>
-            <div class="sig-step">
-              <div class="sig-step-no">3</div>
-              <div class="sig-step-body">
-                <div class="sig-step-h">공개키로 검증</div>
-                <div class="mono small" id="uSigPubkey"></div>
-                <div class="muted small">공개키가 (a) UTXO가 잠긴 주소로 유도되는지, (b) 서명이 sighash와 맞는지 확인.</div>
-              </div>
-            </div>
-          </div>
-          <div class="sig-verdict" id="uSigVerdict"></div>
-        </div>
+        <!-- 서명 & 검증 (JS가 채움 — 송금/도둑질 공용 렌더) -->
+        <div class="sig-box" id="uSigBlock" style="display:none"></div>
       </div>
 
       <!-- ③ 위조 시도(도둑질) -->
@@ -421,6 +555,8 @@
           <button class="btn danger" id="uForgeBtn">🦹 훔치기 시도</button>
         </div>
         <div class="forge-result" id="uForgeResult"></div>
+        <!-- 도둑질도 송금과 똑같은 1·2·3 파이프라인을 렌더 → ③(a)에서 실패하는 걸 눈으로 -->
+        <div class="sig-box" id="uForgeSig" style="display:none"></div>
       </div>
 
       <!-- UTXO 풀 -->

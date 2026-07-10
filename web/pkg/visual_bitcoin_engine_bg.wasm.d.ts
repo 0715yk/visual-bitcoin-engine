@@ -17,6 +17,7 @@ export const wasmengine_new: (a: number, b: bigint, c: bigint, d: number, e: big
 export const wasmengine_snapshot: (a: number) => [number, number];
 export const wasmengine_take_logs: (a: number) => [number, number];
 export const wasmengine_tamper: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+export const wasmengine_tamper_rehash: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const wasmengine_validate: (a: number) => [number, number];
 export const wasmheaderminer_info: (a: number) => [number, number];
 export const wasmheaderminer_new: (a: number, b: number, c: number, d: number, e: number) => number;

@@ -280,6 +280,21 @@ impl Blockchain {
                     reason: format!("Block #{} 체인 연결 끊김!", current.id),
                 };
             }
+
+            // 3) 작업증명(PoW) 확인: 해시가 그 블록의 난이도만큼 0으로 시작하는가.
+            // 데이터를 바꾼 뒤 해시만 다시 계산(re-hash)하고 채굴(nonce 찾기)은
+            // 하지 않은 경우, 해시가 0으로 시작하지 않아 여기서 걸린다.
+            let target = "0".repeat(current.difficulty);
+            if !current.hash.starts_with(&target) {
+                return ValidationReport {
+                    valid: false,
+                    failed_block: Some(current.id),
+                    reason: format!(
+                        "Block #{} 작업증명 불충족! 해시가 0 {}개로 시작하지 않는다 (재채굴되지 않은 블록).",
+                        current.id, current.difficulty
+                    ),
+                };
+            }
         }
 
         ValidationReport {
@@ -317,6 +332,33 @@ impl Blockchain {
                 tx.amount = new_amount;
                 return true;
             }
+        }
+        false
+    }
+
+    // 위변조 + 해시 재계산(단, 채굴=nonce 찾기는 하지 않음).
+    // 데이터를 바꾼 뒤 해시를 새로 맞추므로 검증 ①(내용-해시 일치)은 통과하지만,
+    // 새 해시는 난이도(0의 개수)를 만족하지 못하므로 ③(작업증명)에서 걸린다.
+    // → "재해시만으론 부족하고 진짜 채굴이 필요하다"를 보여주는 교육용 기능.
+    pub fn tamper_and_rehash(
+        &mut self,
+        block_index: usize,
+        tx_index: usize,
+        new_to: &str,
+        new_amount: f64,
+    ) -> bool {
+        if let Some(block) = self.chain.get_mut(block_index) {
+            match block.transactions.get_mut(tx_index) {
+                Some(tx) => {
+                    tx.to = new_to.to_string();
+                    tx.amount = new_amount;
+                }
+                None => return false,
+            }
+            // 해시만 다시 계산해서 저장 (채굴은 생략 → PoW 불충족 상태가 됨)
+            let new_hash = block.recalculate_hash();
+            block.hash = new_hash;
+            return true;
         }
         false
     }

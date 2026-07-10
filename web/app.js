@@ -52,6 +52,10 @@ $("tabs").addEventListener("click", (e) => {
   );
 });
 
+// WASM과 무관하게 바로 켜두는 UI(툴팁 · 곡선 시각화). 엔진 로딩 실패해도 떠야 한다.
+setupTooltips();
+setupCurveViz();
+
 // ============================================================
 // 메인: WASM 초기화 후 모든 기능 연결
 // ============================================================
@@ -70,6 +74,189 @@ init()
     $("engineStatus").textContent = "엔진 로딩 실패 (콘솔 확인)";
     console.error(err);
   });
+
+// ============================================================
+// 커스텀 툴팁 (? 도움말) — 호버 + 포커스 + 모바일 탭 지원
+// ============================================================
+// 기존엔 브라우저 기본 title 속성이라 모바일(터치)에선 안 뜨고 화면 끝에서 잘렸다.
+// 이걸 화면 안으로 위치를 보정하는 말풍선으로 바꾼다.
+function setupTooltips() {
+  const bubble = document.createElement("div");
+  bubble.className = "tooltip-bubble";
+  document.body.appendChild(bubble);
+  let current = null;
+
+  // .hint 의 title → data-tip 으로 옮겨 네이티브 툴팁을 끄고, 키보드 접근 가능하게.
+  document.querySelectorAll(".hint[title]").forEach((h) => {
+    h.dataset.tip = h.getAttribute("title");
+    h.removeAttribute("title");
+    h.setAttribute("tabindex", "0");
+    h.setAttribute("role", "button");
+    h.setAttribute("aria-label", "도움말");
+  });
+
+  function show(h) {
+    const tip = h.dataset.tip;
+    if (!tip) return;
+    current = h;
+    bubble.textContent = tip;
+    bubble.classList.add("show");
+
+    // 말풍선 크기를 잰 뒤 화면 안으로 위치 보정
+    const r = h.getBoundingClientRect();
+    const margin = 8;
+    const bw = bubble.offsetWidth;
+    const bh = bubble.offsetHeight;
+    let left = r.left + r.width / 2 - bw / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - bw - margin));
+    let top = r.bottom + 6; // 기본은 아래쪽
+    if (top + bh > window.innerHeight - margin) top = r.top - bh - 6; // 아래 공간 없으면 위로
+    bubble.style.left = `${left}px`;
+    bubble.style.top = `${Math.max(margin, top)}px`;
+  }
+  function hide() {
+    current = null;
+    bubble.classList.remove("show");
+  }
+
+  document.addEventListener("mouseover", (e) => {
+    const h = e.target.closest(".hint");
+    if (h) show(h);
+  });
+  document.addEventListener("mouseout", (e) => {
+    const h = e.target.closest(".hint");
+    if (h && h === current) hide();
+  });
+  document.addEventListener("focusin", (e) => {
+    const h = e.target.closest && e.target.closest(".hint");
+    if (h) show(h);
+  });
+  document.addEventListener("focusout", (e) => {
+    const h = e.target.closest && e.target.closest(".hint");
+    if (h && h === current) hide();
+  });
+  // 모바일/클릭: 탭하면 토글, 바깥을 누르면 닫힘
+  document.addEventListener("click", (e) => {
+    const h = e.target.closest(".hint");
+    if (h) {
+      e.preventDefault(); // label 안의 힌트를 눌러도 입력창이 포커스되지 않게
+      e.stopPropagation();
+      current === h ? hide() : show(h);
+    } else if (current) {
+      hide();
+    }
+  });
+  window.addEventListener("scroll", hide, true);
+  window.addEventListener("resize", hide);
+}
+
+// ============================================================
+// 타원곡선 시각화 (탭 4) — "개인키 = 점프 횟수, 공개키 = 착지점"
+// ============================================================
+// 실수 위의 곡선 y² = x³ + 7 로 점 덧셈(선 긋기 → 만나는 점 → 뒤집기)을 그린다.
+// 진짜 secp256k1(유한체)은 점들이 흩어져 못 그리지만, 직관은 똑같다.
+function setupCurveViz() {
+  const svg = document.getElementById("curveSvg");
+  if (!svg) return;
+
+  const W = 520, H = 360;
+  const xmin = -3, xmax = 5, ymin = -8.5, ymax = 8.5;
+  const sx = (x) => ((x - xmin) / (xmax - xmin)) * W;
+  const sy = (y) => H - ((y - ymin) / (ymax - ymin)) * H;
+  const B = 7;
+
+  // 실수 타원곡선 점 덧셈 (a=0)
+  const addPts = (P, Q) => {
+    let lam;
+    if (Math.abs(P.x - Q.x) < 1e-9 && Math.abs(P.y - Q.y) < 1e-9) {
+      lam = (3 * P.x * P.x) / (2 * P.y); // 접선(같은 점 더하기)
+    } else {
+      lam = (Q.y - P.y) / (Q.x - P.x); // 두 점 잇는 선
+    }
+    const x = lam * lam - P.x - Q.x;
+    const y = lam * (P.x - x) - P.y;
+    return { x, y, lam };
+  };
+
+  const G = { x: -1, y: Math.sqrt(-1 * -1 * -1 + B) }; // (-1, √6)
+  const MAXD = 4;
+  const all = [G];
+  for (let i = 1; i < MAXD; i++) all.push(addPts(all[i - 1], G));
+
+  // 곡선 경로(위/아래 가지)
+  const x0 = -Math.cbrt(B);
+  const up = [], lo = [];
+  for (let x = x0; x <= xmax; x += 0.03) {
+    const v = x * x * x + B;
+    if (v < 0) continue;
+    const yy = Math.sqrt(v);
+    up.push([sx(x), sy(yy)]);
+    lo.push([sx(x), sy(-yy)]);
+  }
+  const toPath = (arr) => arr.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
+  const curvePath = toPath(up) + toPath(lo);
+
+  const label = (i) => (i === 0 ? "G" : i + 1 + "G");
+  let d = 1;
+
+  function render() {
+    const shown = all.slice(0, d);
+    const Q = shown[shown.length - 1];
+    let g = "";
+
+    // 축
+    g += `<line x1="0" y1="${sy(0)}" x2="${W}" y2="${sy(0)}" stroke="#2a2f3a"/>`;
+    g += `<line x1="${sx(0)}" y1="0" x2="${sx(0)}" y2="${H}" stroke="#2a2f3a"/>`;
+    // 곡선
+    g += `<path d="${curvePath}" fill="none" stroke="#5b6270" stroke-width="2"/>`;
+    g += `<text x="${W - 6}" y="${sy(0) - 6}" fill="#5b6270" font-size="11" text-anchor="end">y² = x³ + 7</text>`;
+
+    // 마지막 덧셈의 작도선 (d>=2)
+    if (d >= 2) {
+      const src = d === 2 ? G : all[d - 2];
+      const N = all[d - 1];
+      const yAt = (x) => src.y + N.lam * (x - src.x);
+      g += `<line x1="${sx(xmin)}" y1="${sy(yAt(xmin))}" x2="${sx(xmax)}" y2="${sy(yAt(xmax))}" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+      // 선이 곡선과 만나는 세 번째 점 (N.x, -N.y) → 위아래로 뒤집으면 새 점 N
+      g += `<circle cx="${sx(N.x)}" cy="${sy(-N.y)}" r="4" fill="none" stroke="#58a6ff" stroke-width="1.5"/>`;
+      g += `<line x1="${sx(N.x)}" y1="${sy(-N.y)}" x2="${sx(N.x)}" y2="${sy(N.y)}" stroke="#bc8cff" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#cvArrow)"/>`;
+    }
+
+    // 점들
+    shown.forEach((p, i) => {
+      const isG = i === 0;
+      const isQ = i === shown.length - 1;
+      const color = isG ? "#3fb950" : isQ ? "#f7931a" : "#c9d1d9";
+      g += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${isQ ? 6 : 4.5}" fill="${color}"/>`;
+      const txt = label(i) + (isQ && d > 1 ? " = Q" : "");
+      g += `<text x="${sx(p.x) + 8}" y="${sy(p.y) - 8}" fill="${color}" font-size="13" font-weight="700">${txt}</text>`;
+    });
+
+    svg.innerHTML =
+      `<defs><marker id="cvArrow" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">` +
+      `<path d="M0,0 L6,3 L0,6 Z" fill="#bc8cff"/></marker></defs>` + g;
+
+    const rd = document.getElementById("curveRead");
+    if (rd)
+      rd.innerHTML = `점프 횟수(개인키 d) = <b>${d}</b> · 착지점(공개키 Q) = <b>${d}G</b> ≈ (${Q.x.toFixed(
+        2
+      )}, ${Q.y.toFixed(2)})`;
+    const ab = document.getElementById("curveAdd");
+    if (ab) ab.disabled = d >= MAXD;
+  }
+
+  document.getElementById("curveAdd").addEventListener("click", () => {
+    if (d < MAXD) {
+      d++;
+      render();
+    }
+  });
+  document.getElementById("curveReset").addEventListener("click", () => {
+    d = 1;
+    render();
+  });
+  render();
+}
 
 // ============================================================
 // 탭 1 — SHA-256 놀이터
@@ -118,6 +305,130 @@ function setupSha() {
   avA.addEventListener("input", renderAv);
   avB.addEventListener("input", renderAv);
   renderAv();
+
+  // --- 미니 블록체인: 해시가 블록을 잇는다 ---
+  setupMiniChain();
+}
+
+// 탭 1 하단: SHA-256 해시로 블록을 "연결"하는 원리를 직접 만져보는 미니 체인.
+// 각 블록 해시 = SHA-256(앞 블록 해시 + 데이터 + nonce).
+// - 데이터/nonce를 고치면 그 블록 해시가 바뀌고, 뒤 블록들이 줄줄이 다시 계산된다(연결).
+// - ⛏ 채굴 버튼은 해시 앞이 "0"으로 시작할 때까지 nonce를 자동으로 찾는다(탭 2의 작업증명 축소판).
+function setupMiniChain() {
+  const box = $("mcChain");
+  if (!box) return;
+
+  const GENESIS_PREV = "0".repeat(64);
+  const blocks = [
+    { data: "Satoshi → Alice : 10 BTC" },
+    { data: "Alice → Bob : 4 BTC" },
+    { data: "Bob → Carol : 1 BTC" },
+  ];
+
+  box.innerHTML = blocks
+    .map((b, i) => {
+      const link =
+        i > 0
+          ? `<div class="mc-link" title="이 블록의 '이전 해시' = 바로 앞 블록의 '이 블록 해시'"></div>`
+          : "";
+      return `${link}
+      <div class="mc-block ${i === 0 ? "genesis" : ""}">
+        <div class="mc-head">
+          <span class="id">블록 #${i + 1}</span>
+          ${i === 0 ? '<span class="tag">제네시스(첫 블록)</span>' : ""}
+        </div>
+        <div class="mc-row">
+          <span class="k">데이터</span>
+          <input id="mcData${i}" value="${esc(b.data)}" />
+        </div>
+        <div class="mc-row">
+          <span class="k">nonce</span>
+          <div class="mc-nonce">
+            <input id="mcNonce${i}" type="number" value="0" />
+            <button class="btn sm" data-mine="${i}">⛏ 채굴 (해시 앞을 0으로)</button>
+          </div>
+        </div>
+        <div class="mc-row">
+          <span class="k">이전 해시</span>
+          <span class="mc-hash prev" id="mcPrev${i}"></span>
+        </div>
+        <div class="mc-row">
+          <span class="k">이 블록 해시</span>
+          <span class="mc-hash self" id="mcHash${i}"></span>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  const hashOf = (prev, i) =>
+    sha256(prev + $(`mcData${i}`).value + $(`mcNonce${i}`).value);
+
+  // flashFrom 이후의 블록들은 해시가 바뀐 걸 강조(주황 반짝)
+  const recompute = (flashFrom = -1) => {
+    let prev = GENESIS_PREV;
+    for (let i = 0; i < blocks.length; i++) {
+      const hash = hashOf(prev, i);
+      $(`mcPrev${i}`).textContent = prev;
+      const hashEl = $(`mcHash${i}`);
+      hashEl.innerHTML = hlLeadingZeros(hash); // 앞의 0을 주황으로 강조
+      if (flashFrom >= 0 && i >= flashFrom) {
+        hashEl.classList.remove("flash");
+        void hashEl.offsetWidth; // 애니메이션 재시작을 위한 강제 리플로우
+        hashEl.classList.add("flash");
+      }
+      prev = hash; // 이 블록의 해시가 다음 블록의 '이전 해시'가 된다
+    }
+  };
+
+  // 블록 i까지의 '이전 해시'(= i-1블록의 해시)를 구한다.
+  const prevOf = (i) => {
+    let prev = GENESIS_PREV;
+    for (let j = 0; j < i; j++) prev = hashOf(prev, j);
+    return prev;
+  };
+
+  // ⛏ 채굴: 해시가 "0"으로 시작할 때까지 nonce를 0,1,2,… 늘려 찾는다(난이도 1).
+  // 곧바로 정답으로 점프하지 않고, nonce가 또르르 올라가다 멈추는 "노가다"를 눈으로 보여준다.
+  const mining = new Set();
+  const mine = (i) => {
+    if (mining.has(i)) return;
+    mining.add(i);
+    const prev = prevOf(i);
+    const data = $(`mcData${i}`).value;
+    const nonceEl = $(`mcNonce${i}`);
+    const hashEl = $(`mcHash${i}`);
+    const btn = box.querySelector(`[data-mine="${i}"]`);
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "⛏ 채굴 중…";
+
+    let n = 0;
+    const step = () => {
+      const h = sha256(prev + data + String(n));
+      nonceEl.value = n;
+      hashEl.innerHTML = hlLeadingZeros(h); // 실패 중엔 앞에 0이 없어 강조도 안 됨
+      if (h.startsWith("0")) {
+        mining.delete(i);
+        btn.disabled = false;
+        btn.textContent = label;
+        recompute(i); // 정답을 찾았으니 뒤 블록까지 갱신 + 강조
+        return;
+      }
+      n++;
+      setTimeout(step, 90);
+    };
+    step();
+  };
+
+  blocks.forEach((_, i) => {
+    $(`mcData${i}`).addEventListener("input", () => recompute(i));
+    $(`mcNonce${i}`).addEventListener("input", () => recompute(i));
+  });
+  box.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mine]");
+    if (btn) mine(Number(btn.dataset.mine));
+  });
+  recompute();
 }
 
 // ============================================================
@@ -195,6 +506,7 @@ function setupMiningLab() {
     stopBtn.disabled = true;
     dataEl.disabled = false;
     diffEl.disabled = false;
+    $("powAnim").hidden = true; // 곡괭이질 애니메이션 숨김
   }
 
   // 화면 상단 통계 + 현재 해시 갱신
@@ -232,6 +544,7 @@ function setupMiningLab() {
     dataEl.disabled = true;
     diffEl.disabled = true;
     $("powHash").classList.remove("found");
+    $("powAnim").hidden = false; // 곡괭이질 애니메이션 표시
     logEl.innerHTML = "";
 
     const data = dataEl.value;
@@ -344,12 +657,24 @@ function setupChainSim() {
   $("mineBtn").addEventListener("click", mineBlock);
   $("validateBtn").addEventListener("click", runValidate);
 
+  // 첫 채굴 배너 버튼: 채굴 섹션으로 스크롤하며 바로 채굴 시작
+  $("firstMineBtn").addEventListener("click", () => {
+    $("mineBtn").scrollIntoView({ behavior: "smooth", block: "center" });
+    mineBlock();
+  });
+
   // 위변조 버튼은 동적으로 생성되므로 이벤트 위임
   $("chain").addEventListener("click", (e) => {
+    const rehashBtn = e.target.closest("[data-tamper-rehash]");
+    if (rehashBtn) {
+      const [bi, ti] = rehashBtn.dataset.tamperRehash.split(":").map(Number);
+      doTamper(bi, ti, true);
+      return;
+    }
     const btn = e.target.closest("[data-tamper]");
     if (!btn) return;
     const [bi, ti] = btn.dataset.tamper.split(":").map(Number);
-    doTamper(bi, ti);
+    doTamper(bi, ti, false);
   });
 
   startEngine();
@@ -401,6 +726,14 @@ function render() {
   const supply = s.balances.reduce((a, b) => a + b.amount, 0);
   $("stSupply").innerHTML = `${fmtBtc(supply)}<small> BTC</small>`;
 
+  // 첫 채굴 유도 배너: 아직 아무도 코인이 없을 때만 (거래를 하려면 먼저 채굴 필요)
+  const noCoins = s.balances.length === 0;
+  $("firstMineBanner").style.display = noCoins ? "block" : "none";
+  if (noCoins) {
+    $("fmReward").textContent = fmtBtc(s.current_reward);
+    $("fmMiner").textContent = $("minerAddr").value.trim() || "Satoshi";
+  }
+
   renderBalances(s.balances);
   renderMempool(s.pending);
   renderChain(s.chain);
@@ -416,7 +749,7 @@ function renderBalances(balances) {
   const max = Math.max(...balances.map((b) => b.amount), 1);
   box.innerHTML = balances
     .map((b) => {
-      const isMiner = /miner/i.test(b.address);
+      const isMiner = /miner|satoshi/i.test(b.address);
       return `<div class="bal-row">
         <span class="name ${isMiner ? "miner" : ""}">${esc(b.address)}</span>
         <span class="bal-bar"><span style="width:${(b.amount / max) * 100}%"></span></span>
@@ -438,16 +771,17 @@ function renderMempool(pending) {
 function txRow(tx, opts = {}) {
   const coinbase = tx.from === "COINBASE";
   const cls = `tx ${coinbase ? "coinbase" : ""} ${opts.tampered ? "tampered" : ""}`;
-  const tamperBtn =
+  const tamperBtns =
     opts.tamperKey != null
-      ? `<button class="btn danger sm" data-tamper="${opts.tamperKey}" title="이 거래를 몰래 조작">조작</button>`
+      ? `<button class="btn danger sm" data-tamper="${opts.tamperKey}" title="데이터만 바꾸고 해시는 그대로 → 검증 ①(해시 불일치)에서 걸림">조작</button>
+    <button class="btn danger sm" data-tamper-rehash="${opts.tamperKey}" title="바꾼 뒤 해시는 다시 계산(채굴은 생략) → 검증 ③(작업증명)에서 걸림">조작+재해시</button>`
       : "";
   return `<div class="${cls}">
     <span class="from">${coinbase ? "⛏ COINBASE" : esc(tx.from)}</span>
     <span class="arrow">→</span>
     <span class="to">${esc(tx.to)}</span>
     <span class="amount">${fmtBtc(tx.amount)} BTC</span>
-    ${tamperBtn}
+    ${tamperBtns}
   </div>`;
 }
 
@@ -466,12 +800,19 @@ function renderChain(chain) {
       // 이전 블록과의 연결 확인
       const linkBroken = i > 0 && block.previous_hash !== chain[i - 1].hash;
 
+      // 작업증명(PoW) 확인: 저장된 해시가 이 블록의 난이도만큼 0으로 시작하나?
+      // (제네시스는 엔진 검증과 동일하게 건너뜀)
+      const target = "0".repeat(block.difficulty || 0);
+      const powBad = !isGenesis && (block.difficulty || 0) > 0 && !block.hash.startsWith(target);
+
+      const bad = tampered || linkBroken || powBad;
+
       const txs = block.transactions.length
         ? block.transactions
             .map((tx, ti) =>
               txRow(tx, {
                 tamperKey: `${i}:${ti}`,
-                tampered: tampered,
+                tampered: tampered || powBad,
               })
             )
             .join("")
@@ -484,23 +825,32 @@ function renderChain(chain) {
 
       return `${link}
       <div class="block-wrap">
-        <div class="block ${isGenesis ? "genesis" : ""} ${tampered || linkBroken ? "tampered" : ""}">
+        <div class="block ${isGenesis ? "genesis" : ""} ${bad ? "tampered" : ""}">
           <div class="block-head">
             <span class="id">Block #${block.id}</span>
             ${isGenesis ? '<span class="tag">제네시스</span>' : ""}
             <span class="tag nonce">nonce ${fmtInt(block.nonce)}</span>
             <span class="tag time">${new Date(block.timestamp * 1000).toLocaleTimeString("ko-KR")}</span>
-            ${tampered ? '<span class="tag" style="color:var(--red)">⚠ 위변조 감지</span>' : ""}
+            ${tampered ? '<span class="tag" style="color:var(--red)">⚠ 위변조 감지 (해시 불일치)</span>' : ""}
+            ${powBad ? '<span class="tag" style="color:var(--red)">⚠ 작업증명 불충족 (채굴 안 됨)</span>' : ""}
           </div>
           <div class="block-field">
             <span class="lbl">이 블록 해시</span>
-            <span class="hash-pill self">${esc(block.hash)}</span>
+            <span class="hash-pill self ${powBad ? "bad" : ""}">${hlLeadingZeros(block.hash)}</span>
           </div>
           ${
             tampered
               ? `<div class="block-field">
                   <span class="lbl" style="color:var(--red)">다시 계산</span>
                   <span class="hash-pill bad">${esc(recomputed)}</span>
+                </div>`
+              : ""
+          }
+          ${
+            powBad
+              ? `<div class="block-field">
+                  <span class="lbl" style="color:var(--red)">필요 조건</span>
+                  <span class="hash-pill bad">${esc(target)}… 로 시작해야 함 (0 ${block.difficulty}개)</span>
                 </div>`
               : ""
           }
@@ -516,7 +866,7 @@ function renderChain(chain) {
 }
 
 function updateAddrList(s) {
-  const names = new Set(["Miner1", "Alice", "Bob", "Charlie", "Dave"]);
+  const names = new Set(["Satoshi", "Alice", "Bob", "Charlie", "Dave"]);
   s.balances.forEach((b) => names.add(b.address));
   $("addrList").innerHTML = [...names].map((n) => `<option value="${esc(n)}">`).join("");
 }
@@ -524,7 +874,7 @@ function updateAddrList(s) {
 // ---------- 채굴 애니메이션 ----------
 function mineBlock() {
   if (engine.is_mining()) return;
-  const miner = $("minerAddr").value.trim() || "Miner1";
+  const miner = $("minerAddr").value.trim() || "Satoshi";
 
   const info = JSON.parse(engine.begin_mine(miner));
   pullLogs();
@@ -578,7 +928,9 @@ function runValidate() {
 }
 
 // ---------- 위변조 ----------
-function doTamper(blockIndex, txIndex) {
+// rehash=false: 데이터만 바꾸고 해시는 그대로 → 검증 ①(해시 불일치)에서 걸림
+// rehash=true : 바꾼 뒤 해시도 다시 계산(채굴은 생략) → 검증 ③(작업증명)에서 걸림
+function doTamper(blockIndex, txIndex, rehash = false) {
   const s = snap();
   const tx = s.chain[blockIndex].transactions[txIndex];
   const newTo = prompt(`받는 사람을 바꿉니다.\n현재: ${tx.to}`, tx.to);
@@ -588,11 +940,20 @@ function doTamper(blockIndex, txIndex) {
   const newAmount = Number(newAmountStr);
   if (Number.isNaN(newAmount)) return;
 
-  engine.tamper(blockIndex, txIndex, newTo, newAmount);
+  if (rehash) {
+    engine.tamper_rehash(blockIndex, txIndex, newTo, newAmount);
+  } else {
+    engine.tamper(blockIndex, txIndex, newTo, newAmount);
+  }
   $("verdict").style.display = "none";
   render();
   // 위변조 직후 안내
-  flashTxMsg("블록을 조작했습니다. '체인 검증'을 눌러 탐지되는지 보세요.", false);
+  flashTxMsg(
+    rehash
+      ? "조작 후 해시를 다시 계산했어요(채굴은 생략). 해시는 내용과 맞지만 0으로 시작하지 않죠 → '체인 검증'을 눌러 작업증명(③)에서 걸리는지 보세요."
+      : "블록을 조작했습니다(해시는 그대로). '체인 검증'을 눌러 해시 불일치(①)로 탐지되는지 보세요.",
+    false
+  );
 }
 
 // ---------- 로그 콘솔 ----------
@@ -639,6 +1000,20 @@ function setupUtxo() {
 
   $("uSendBtn").addEventListener("click", doUtxoSend);
   $("uForgeBtn").addEventListener("click", doUtxoForge);
+
+  // "원문을 직접 SHA-256으로 돌려보기" — 서명 블록이 동적 생성되므로 이벤트 위임
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".sig-hash-btn");
+    if (!btn) return;
+    const box = btn.closest(".sig-box");
+    if (!box) return;
+    const calc = sha256(btn.dataset.msg || ""); // WASM의 SHA-256 (엔진과 동일한 함수)
+    const match = calc === (btn.dataset.sighash || "");
+    box.querySelector(".sig-hash-calc").textContent = calc;
+    box.querySelector(".sig-hash-cmp").innerHTML = match
+      ? `<span class="cmp ok">✅ 계산값 == 엔진의 sighash — 똑같죠? sighash는 "원문을 SHA-256으로 요약한 값"일 뿐이고, 누구나 이렇게 재현·검증할 수 있어요.</span>`
+      : `<span class="cmp bad">❌ 값이 다릅니다. (원문이 바뀌었거나 계산 대상이 다름)</span>`;
+  });
   $("uReset").addEventListener("click", () => {
     utxo.free?.();
     utxo = new WasmUtxo();
@@ -646,6 +1021,8 @@ function setupUtxo() {
     $("uFlowCard").style.display = "none";
     $("uMsg").textContent = "";
     $("uForgeResult").innerHTML = "";
+    $("uForgeSig").style.display = "none";
+    $("uSigBlock").style.display = "none";
     renderUtxoPool();
   });
 
@@ -832,28 +1209,165 @@ function renderUtxoFlow(r, from, to) {
   renderSigBlock(r);
 }
 
-// 서명 & 검증 블록 채우기
-function renderSigBlock(r) {
-  const block = $("uSigBlock");
-  if (!block) return;
+// 주소 뒤에 "(= 이름)" 라벨을 붙여 HTML로 (스크롤 없이 누구 건지 바로 보이게)
+function addrLabelHtml(addr) {
+  const who = addrToLabel.get(addr);
+  return `${esc(addr)}${who ? ` <span class="who">(= ${esc(who)})</span>` : ""}`;
+}
+
+// 주소↔이름 매핑 최신화 (서명 블록 안에서 바로 이름 표시)
+function refreshAddrLabels() {
+  const s = uSnap();
+  addrToLabel = new Map();
+  (s.wallets || []).forEach((w) => addrToLabel.set(w.address, w.label));
+}
+
+// 서명 대상 원문을 사람이 읽기 쉬운 항목으로 분해 (이름 라벨 포함)
+function sigMsgLegend(message, signerAddress) {
+  const parts = String(message).split(";").filter(Boolean);
+  const items = parts.map((p) => {
+    if (p.startsWith("in:")) {
+      const [, txid, vout] = p.split(":");
+      return `<div class="leg-in">입력 · 소비할 출처(UTXO) <span class="mono">${esc(
+        (txid || "").slice(0, 14)
+      )}…:${esc(vout || "")}</span></div>`;
+    }
+    if (p.startsWith("out:")) {
+      const [, addr, amt] = p.split(":");
+      const isChange = signerAddress && addr === signerAddress;
+      const role = isChange ? "거스름돈 →" : "받는 사람 →";
+      return `<div class="leg-out">출력 · ${role} <span class="mono">${addrLabelHtml(
+        addr || ""
+      )}</span> ← <b>${esc(amt || "")}</b> BTC</div>`;
+    }
+    return `<div>${esc(p)}</div>`;
+  });
+  return items.join("");
+}
+
+// 1·2·3 서명/검증 블록 전체 HTML을 만들어 반환 (송금·도둑질 공용)
+function sigBlockHTML(r) {
+  const msg = r.message || "";
+  const sig = r.signature || "";
+  const rHex = sig.slice(0, 64);
+  const sHex = sig.slice(64);
+  const derived = r.signerAddress || "";
+  const lock = r.lockAddress || "";
+  const aOk = derived === lock; // (a) 주인 확인: 유도 주소 == 잠긴 주소?
+
+  // (a) 행: 통과/실패에 따라 색과 마크
+  const aRow = aOk
+    ? `<div><b>(a) 주인 확인</b> ✅ — 공개키를 해시한 주소 <span class="mono">${addrLabelHtml(
+        derived
+      )}</span> <b>==</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
+        lock
+      )}</span> <span class="muted">(이 공개키가 진짜 그 동전 임자 것)</span></div>`
+    : `<div class="vfail"><b>(a) 주인 확인</b> ❌ — 서명한 키의 주소 <span class="mono">${addrLabelHtml(
+        derived
+      )}</span> <b>≠</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
+        lock
+      )}</span> <span class="muted">→ 남의 동전! 여기서 거부됩니다.</span></div>`;
+
+  // (b) 행: (a)가 통과했을 때만 실제로 확인됨. 도둑질은 (a)에서 이미 탈락.
+  const bRow = aOk
+    ? `<div><b>(b) 동의 확인</b> ✅ — 서명 <b>(r,s)</b>·sighash <b>z</b>·공개키 <b>Q</b>로 곡선 점 <span class="mono">R′ = z·s⁻¹·G + r·s⁻¹·Q</span> → <b>R′.x == r</b> 성립. <span class="muted">(그 임자가 정확히 이 거래에 동의)</span></div>`
+    : `<div class="vskip"><b>(b) 동의 확인</b> — <span class="muted">(a)에서 이미 탈락해 확인까지 안 감. 참고로 이 서명 자체는 <b>공격자 키로는 수학적으로 유효</b>하지만, 그 키는 이 동전 주인이 아니라 소용없어요.</span></div>`;
+
+  const verdict = r.verified
+    ? `<div class="sig-verdict ok">✅ 검증 통과 — (a) 공개키가 UTXO 주소와 일치하고, (b) 서명도 유효합니다. 거래가 적용되었습니다.</div>`
+    : `<div class="sig-verdict bad">🚫 검증 실패 — ${esc(
+        r.error || "서명이 유효하지 않습니다."
+      )} 거래가 거부되어 동전은 그대로 안전합니다. 🔒</div>`;
+
+  return `
+    <div class="sig-title">🔏 디지털 서명 &amp; 검증 <span class="pill-tag">secp256k1 ECDSA</span></div>
+    <div class="sig-steps">
+      <div class="sig-step">
+        <div class="sig-step-no">1</div>
+        <div class="sig-step-body">
+          <div class="sig-step-h">서명 대상 원문 → SHA-256 → sighash</div>
+          <div class="muted small" style="margin-bottom:6px">거래 내용을 정해진 형식으로 <b>직렬화</b>(각 입력의 출처 + 각 출력의 주소·금액)한 <b>원문</b>을 SHA-256으로 요약한 게 sighash고, 개인키는 이 sighash에 서명해요.</div>
+          <div class="sig-sub-label">① 서명 대상 원문 (직렬화된 거래 내용)</div>
+          <div class="mono small sig-msg">${esc(msg)}</div>
+          <div class="sig-msg-legend">${sigMsgLegend(msg, derived)}</div>
+          <button class="btn ghost sm sig-hash-btn" data-msg="${esc(msg)}" data-sighash="${esc(
+    r.sighash
+  )}" style="margin-top:8px">🔁 이 원문을 SHA-256으로 직접 돌려보기</button>
+          <div class="sig-sub-label" style="margin-top:8px">② 내 브라우저에서 계산한 SHA-256</div>
+          <div class="mono small sig-hash-calc"><span class="muted">위 버튼을 누르면 여기서 직접 계산해요.</span></div>
+          <div class="sig-sub-label" style="margin-top:8px">③ 엔진이 실제 서명에 쓴 sighash</div>
+          <div class="mono small">${esc(r.sighash)}</div>
+          <div class="sig-hash-cmp"></div>
+        </div>
+      </div>
+      <div class="sig-step">
+        <div class="sig-step-no">2</div>
+        <div class="sig-step-body">
+          <div class="sig-step-h">개인키로 sighash에 서명 — ${esc(r.signerLabel)}</div>
+          <div class="muted small" style="margin-bottom:6px">ECDSA-secp256k1가 <b>재료 2개</b>(개인키 + sighash)를 받아 서명 1개를 만들어요. 개인키는 비밀이라 <b>화면에 안 나옵니다</b>. 결과 서명은 64바이트 = <b>r</b>(앞 32) ‖ <b>s</b>(뒤 32).</div>
+          <div class="sig-io">
+            <div class="sig-io-in">
+              <div>🔒 <b>${esc(r.signerLabel)}</b> 의 개인키 <span class="muted">(비밀 · 미표시)</span></div>
+              <div class="sig-io-plus">＋</div>
+              <div>sighash <span class="mono">${esc(r.sighash.slice(0, 16))}…</span></div>
+            </div>
+            <div class="sig-io-op">ECDSA<br/>secp256k1 ⚙️</div>
+            <div class="sig-io-out">
+              <div class="sig-sub-label">서명 r <span class="muted">(앞 32바이트)</span></div>
+              <div class="mono small">${esc(rHex)}</div>
+              <div class="sig-sub-label" style="margin-top:6px">서명 s <span class="muted">(뒤 32바이트)</span></div>
+              <div class="mono small">${esc(sHex)}</div>
+            </div>
+          </div>
+          <div class="muted small" style="margin-top:6px">이 데모(및 현대 비트코인)는 <b>RFC 6979 결정론적</b> 서명이라 같은 (개인키·sighash)면 항상 같은 서명. 개인키 없이는 못 만들지만, 공개키로는 누구나 검증할 수 있어요(3단계).</div>
+        </div>
+      </div>
+      <div class="sig-step">
+        <div class="sig-step-no">3</div>
+        <div class="sig-step-body">
+          <div class="sig-step-h">공개키로 검증 <span class="muted">(개인키 없이, 누구나)</span></div>
+          <div class="sig-sub-label">서명자 공개키 — 곡선 위의 점, <b>Q = 개인키 d × G</b> (33바이트 압축)</div>
+          <div class="mono small">${esc(r.pubkey)}</div>
+          <div class="muted small" style="margin:3px 0 6px">앞 <b>02/03</b> = 점의 y가 짝/홀, 뒤 64자리 = x좌표. <b>d→Q</b>는 쉽지만 <b>Q→d</b>(개인키 역산)는 불가능.</div>
+          <div class="sig-verify-rows">
+            ${aRow}
+            ${bRow}
+          </div>
+          <details class="aside" style="margin-top:8px">
+            <summary>🔍 (b) 이 식이 왜 "위조 불가 증명"이 되나요?</summary>
+            <div class="aside-body">
+              <p>서명자는 개인키 <b>d</b>와 무작위 <b>k</b>로 서명을 만들어요:</p>
+              <p class="mono small">r = (k·G).x  ·  s = k⁻¹·(z + r·d)  mod n</p>
+              <p>검증자는 <b>개인키 없이</b> 공개값만으로 <b>R′ = u₁·G + u₂·Q</b> (u₁=z·s⁻¹, u₂=r·s⁻¹)를 계산합니다. Q = d·G 를 대입하면 <b>R′ = k·G</b> 로 되돌아오고, 그때만 <b>R′.x == r</b>.</p>
+              <ul class="tight">
+                <li>등식이 맞으려면 <b>Q를 만든 그 d</b>로 <b>바로 이 z</b>에 서명했어야만 함.</li>
+                <li>거래 내용을 한 글자만 바꿔도 z가 달라져 → <b>R′.x ≠ r</b> → 거부.</li>
+                <li>다른 사람이 서명하면(다른 d·Q) 안 맞아 → 거부.</li>
+              </ul>
+              <p>핵심: <b>개인키 d를 한 번도 드러내지 않고</b> "d를 안다 + 이 거래에 동의한다"를 증명 — 이게 secp256k1 ECDSA예요.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+    ${verdict}`;
+}
+
+// 서명/검증 블록을 지정한 컨테이너에 렌더 (송금·도둑질 공용)
+function renderSigInto(id, r) {
+  const box = $(id);
+  if (!box) return;
   if (!r.sighash) {
-    block.style.display = "none";
+    box.style.display = "none";
     return;
   }
-  block.style.display = "block";
-  $("uSigHash").textContent = r.sighash;
-  $("uSigSigner").textContent = `${r.signerLabel} 의 개인키`;
-  $("uSigSignature").textContent = r.signature;
-  $("uSigPubkey").textContent = r.pubkey;
+  refreshAddrLabels();
+  box.style.display = "block";
+  box.innerHTML = sigBlockHTML(r);
+}
 
-  const v = $("uSigVerdict");
-  if (r.verified) {
-    v.className = "sig-verdict ok";
-    v.innerHTML = `✅ 검증 통과 — 공개키가 UTXO 주소와 일치하고, 서명도 유효합니다. 거래가 적용되었습니다.`;
-  } else {
-    v.className = "sig-verdict bad";
-    v.innerHTML = `❌ 검증 실패 — ${esc(r.error || "서명이 유효하지 않습니다.")} 거래가 거부되었습니다.`;
-  }
+function renderSigBlock(r) {
+  renderSigInto("uSigBlock", r);
 }
 
 // 위조(도둑질) 시도
@@ -879,6 +1393,7 @@ function doUtxoForge() {
   if (!r.sighash) {
     // 검증 이전 단계에서 막힘 (예: 피해자 UTXO 부족)
     box.innerHTML = `<div class="forge-verdict">시도 실패: ${esc(r.error || "")}</div>`;
+    renderSigInto("uForgeSig", { sighash: "" }); // 숨김
     return;
   }
 
@@ -889,14 +1404,14 @@ function doUtxoForge() {
   }
 
   box.innerHTML = `<div class="forge-verdict">
-    <b>🚫 도둑질 거부됨!</b><br/>
-    <b>${esc(attacker)}</b> 가 <b>${esc(victim)}</b> 의 ${fmtBtc(amount)} BTC를 가로채려 했습니다.<br/>
-    하지만 ${esc(victim)} 의 <b>개인키가 없어서</b>, ${esc(attacker)} 는 <b>자기 개인키로 서명</b>할 수밖에 없었어요.<br/>
-    · 서명한 키의 주소: <span class="addr bad">${esc(r.signerAddress)}</span> (= ${esc(attacker)})<br/>
-    · 동전이 잠긴 주소: <span class="addr victim">${esc(r.lockAddress)}</span> (= ${esc(victim)})<br/>
-    두 주소가 <b>다르므로</b> 검증 단계에서 거부 → ${esc(victim)} 의 동전은 그대로 안전합니다. 🔒
+    <b>🚫 도둑질 거부됨!</b> <b>${esc(attacker)}</b> 가 <b>${esc(victim)}</b> 의 ${fmtBtc(
+    amount
+  )} BTC를 가로채려 했지만, ${esc(victim)} 의 <b>개인키가 없어서</b> 자기 키로 서명할 수밖에 없었어요.
+    아래 <b>똑같은 1·2·3 검증 파이프라인</b>이 <b>③-(a)</b>에서 딱 걸리는 걸 보세요. 🔒
   </div>`;
-  // 검증 실패라 상태는 안 변하지만, 강조를 위해 풀은 그대로 둠
+  // 송금과 동일한 서명/검증 블록을 렌더 → ③(a) 주소 불일치로 실패하는 게 보임
+  renderSigInto("uForgeSig", r);
+  // 검증 실패라 UTXO 상태는 그대로
 }
 
 function pullUtxoLogs() {

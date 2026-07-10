@@ -123,6 +123,7 @@ pub struct SendResult {
     pub selected_sum: f64,
 
     // --- 서명/검증 정보 ---
+    pub message: String,       // 서명 대상 원문(직렬화된 거래 내용) → 이걸 SHA-256하면 sighash
     pub sighash: String,       // 서명 대상 메시지의 해시
     pub signature: String,     // 만들어진 서명(hex)
     pub pubkey: String,        // 서명자의 공개키(hex)
@@ -142,6 +143,7 @@ impl SendResult {
             created: vec![],
             fee: 0.0,
             selected_sum: 0.0,
+            message: String::new(),
             sighash: String::new(),
             signature: String::new(),
             pubkey: String::new(),
@@ -434,6 +436,7 @@ impl UtxoEngine {
             created,
             fee,
             selected_sum: sum,
+            message,
             sighash,
             signature: sig_hex,
             pubkey: from_pub,
@@ -538,6 +541,7 @@ impl UtxoEngine {
                     created,
                     fee: 0.0,
                     selected_sum: sum,
+                    message,
                     sighash,
                     signature: sig_hex,
                     pubkey: attacker_pub,

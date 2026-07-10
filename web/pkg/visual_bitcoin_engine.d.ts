@@ -12,6 +12,7 @@ export class WasmEngine {
     snapshot(): string;
     take_logs(): string;
     tamper(block_index: number, tx_index: number, new_to: string, new_amount: number): boolean;
+    tamper_rehash(block_index: number, tx_index: number, new_to: string, new_amount: number): boolean;
     validate(): string;
 }
 
@@ -66,6 +67,7 @@ export interface InitOutput {
     readonly wasmengine_snapshot: (a: number) => [number, number];
     readonly wasmengine_take_logs: (a: number) => [number, number];
     readonly wasmengine_tamper: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly wasmengine_tamper_rehash: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmengine_validate: (a: number) => [number, number];
     readonly wasmheaderminer_info: (a: number) => [number, number];
     readonly wasmheaderminer_new: (a: number, b: number, c: number, d: number, e: number) => number;

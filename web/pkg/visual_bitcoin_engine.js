@@ -126,6 +126,19 @@ export class WasmEngine {
         return ret !== 0;
     }
     /**
+     * @param {number} block_index
+     * @param {number} tx_index
+     * @param {string} new_to
+     * @param {number} new_amount
+     * @returns {boolean}
+     */
+    tamper_rehash(block_index, tx_index, new_to, new_amount) {
+        const ptr0 = passStringToWasm0(new_to, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmengine_tamper_rehash(this.__wbg_ptr, block_index, tx_index, ptr0, len0, new_amount);
+        return ret !== 0;
+    }
+    /**
      * @returns {string}
      */
     validate() {
