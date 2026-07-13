@@ -39,6 +39,53 @@ function hlLeadingZeros(hash) {
 // 거래 한 건을 Rust의 to_hash_string()과 똑같이 문자열로 (해시 재계산용)
 const txToHashString = (tx) => `${tx.from}->${tx.to}:${rustNum(tx.amount)}`;
 
+// ---------- 복사 버튼 (호버 시 나타나 전체 값을 클립보드로) ----------
+// 생략(…)된 주소·txid·공개키를 Ctrl+F 검색/비교하려 할 때 전체 값을 바로 복사.
+function copyBtn(value, cls = "") {
+  return `<button type="button" class="copy-btn ${cls}" data-copy="${esc(
+    String(value)
+  )}" title="전체 값 복사" aria-label="전체 값 복사">⧉</button>`;
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // clipboard API가 막힌 환경(비-https 등) 폴백
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  }
+}
+
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".copy-btn");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const val = btn.getAttribute("data-copy") || "";
+  const ok = await copyToClipboard(val);
+  const prev = btn.textContent;
+  btn.classList.add("copied");
+  btn.textContent = ok ? "✓" : "✕";
+  setTimeout(() => {
+    btn.classList.remove("copied");
+    btn.textContent = prev;
+  }, 1000);
+});
+
 // ============================================================
 // 탭 전환
 // ============================================================
@@ -1005,7 +1052,8 @@ function setupUtxo() {
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".sig-hash-btn");
     if (!btn) return;
-    const box = btn.closest(".sig-box");
+    // 입력별 카드가 여러 개이므로, 이 버튼이 속한 카드(.sig-mini)로 범위를 좁힌다.
+    const box = btn.closest(".sig-mini") || btn.closest(".sig-box");
     if (!box) return;
     const calc = sha256(btn.dataset.msg || ""); // WASM의 SHA-256 (엔진과 동일한 함수)
     const match = calc === (btn.dataset.sighash || "");
@@ -1046,10 +1094,20 @@ function coinChip(u, opts = {}) {
     opts.flash ? "flash-in" : "",
   ].join(" ");
   const role = opts.roleText ? `<span class="role">${opts.roleText}</span>` : "";
+  const full = `${u.txid}:${u.vout}`;
+  // 이 동전이 "잠긴 주소"(= 공개키 해시). 주인 확인의 기준이라 거래 흐름 칩에 함께 표시.
+  const lock =
+    opts.showAddr && u.address
+      ? `<span class="lock" title="이 동전이 잠긴 주소(= 공개키 해시): ${esc(
+          u.address
+        )}">🔒 ${esc(shortAddr(u.address))}${copyBtn(u.address, "inline-copy")}</span>`
+      : "";
   return `<div class="${cls}" data-key="${esc(u.key)}">
     <span class="amt">${fmtBtc(u.amount)}<small> BTC</small></span>
-    <span class="id">${esc(String(u.txid).slice(0, 6))}…:${u.vout}</span>
+    <span class="id" title="${esc(full)}">${esc(String(u.txid).slice(0, 6))}…:${u.vout}</span>
     ${role}
+    ${lock}
+    ${copyBtn(full, "coin-copy")}
   </div>`;
 }
 
@@ -1096,7 +1154,7 @@ function renderUtxoPool(opts = {}) {
       return `<div class="utxo-owner">
         <div class="who ${isMiner ? "miner" : ""}">
           <span class="who-name">${esc(label)}</span>
-          <span class="who-addr" title="${esc(addr)}">${esc(shortAddr(addr))}</span>
+          <span class="who-addr" title="${esc(addr)}">${esc(shortAddr(addr))}${copyBtn(addr, "inline-copy")}</span>
           <span class="sum">잔액 ${fmtBtc(total)} BTC · 동전 ${coins.length}개</span>
         </div>
         <div class="coins">${chips}</div>
@@ -1130,8 +1188,8 @@ function renderWallets(s) {
       return `<div class="wallet">
         <div class="w-name"><span class="w-key">🔑</span>${esc(w.label)}</div>
         <div>
-          <div class="w-row"><span class="w-tag">주소</span><span class="w-addr">${esc(w.address)}</span></div>
-          <div class="w-row"><span class="w-tag">공개키</span><span class="w-pub">${esc(w.pubkey)}</span></div>
+          <div class="w-row"><span class="w-tag">주소</span><span class="w-addr">${esc(w.address)}${copyBtn(w.address, "inline-copy")}</span></div>
+          <div class="w-row"><span class="w-tag">공개키</span><span class="w-pub">${esc(w.pubkey)}${copyBtn(w.pubkey, "inline-copy")}</span></div>
           <div class="w-row"><span class="w-tag">잔액</span><span class="w-bal">${fmtBtc(bal)} BTC</span></div>
         </div>
       </div>`;
@@ -1183,7 +1241,7 @@ function renderUtxoFlow(r, from, to) {
   $("uFlowTxid").textContent = "txid " + r.txid.slice(0, 12) + "…";
 
   $("uFlowInputs").innerHTML = r.spent
-    .map((u) => coinChip(u, { spent: true, roleText: from + " 소유" }))
+    .map((u) => coinChip(u, { spent: true, showAddr: true, roleText: from + " 소유" }))
     .join("");
   const inSum = r.spent.reduce((a, c) => a + c.amount, 0);
   $("uFlowInSum").innerHTML = `합계 <b>${fmtBtc(inSum)}</b> BTC`;
@@ -1194,6 +1252,7 @@ function renderUtxoFlow(r, from, to) {
         change: u.change,
         recipient: !u.change,
         flash: true,
+        showAddr: true,
         roleText: u.change ? `거스름돈 → ${from}` : `→ ${to}`,
       })
     )
@@ -1240,116 +1299,127 @@ function sigMsgLegend(message, signerAddress) {
         addr || ""
       )}</span> ← <b>${esc(amt || "")}</b> BTC</div>`;
     }
+    if (p.startsWith("spending:")) {
+      const [, txid, vout] = p.split(":");
+      return `<div class="leg-spend">지금 서명 중인 입력 <span class="mono">${esc(
+        (txid || "").slice(0, 14)
+      )}…:${esc(vout || "")}</span> <span class="muted">(이 부분 때문에 입력마다 sighash가 달라져요)</span></div>`;
+    }
     return `<div>${esc(p)}</div>`;
   });
   return items.join("");
 }
 
-// 1·2·3 서명/검증 블록 전체 HTML을 만들어 반환 (송금·도둑질 공용)
-function sigBlockHTML(r) {
-  const msg = r.message || "";
-  const sig = r.signature || "";
+// 입력(소비할 UTXO) 하나에 대한 서명·검증 카드 HTML
+function sigInputCardHTML(s, idx) {
+  const sig = s.signature || "";
   const rHex = sig.slice(0, 64);
   const sHex = sig.slice(64);
-  const derived = r.signerAddress || "";
-  const lock = r.lockAddress || "";
-  const aOk = derived === lock; // (a) 주인 확인: 유도 주소 == 잠긴 주소?
+  const outpoint = `${s.txid}:${s.vout}`;
+  const aOk = !!s.ownerOk;
+  const bOk = !!s.sigOk;
 
-  // (a) 행: 통과/실패에 따라 색과 마크
   const aRow = aOk
     ? `<div><b>(a) 주인 확인</b> ✅ — 공개키를 해시한 주소 <span class="mono">${addrLabelHtml(
-        derived
+        s.signerAddress
       )}</span> <b>==</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
-        lock
-      )}</span> <span class="muted">(이 공개키가 진짜 그 동전 임자 것)</span></div>`
+        s.lockAddress
+      )}</span></div>`
     : `<div class="vfail"><b>(a) 주인 확인</b> ❌ — 서명한 키의 주소 <span class="mono">${addrLabelHtml(
-        derived
+        s.signerAddress
       )}</span> <b>≠</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
-        lock
+        s.lockAddress
       )}</span> <span class="muted">→ 남의 동전! 여기서 거부됩니다.</span></div>`;
 
-  // (b) 행: (a)가 통과했을 때만 실제로 확인됨. 도둑질은 (a)에서 이미 탈락.
   const bRow = aOk
-    ? `<div><b>(b) 동의 확인</b> ✅ — 서명 <b>(r,s)</b>·sighash <b>z</b>·공개키 <b>Q</b>로 곡선 점 <span class="mono">R′ = z·s⁻¹·G + r·s⁻¹·Q</span> → <b>R′.x == r</b> 성립. <span class="muted">(그 임자가 정확히 이 거래에 동의)</span></div>`
-    : `<div class="vskip"><b>(b) 동의 확인</b> — <span class="muted">(a)에서 이미 탈락해 확인까지 안 감. 참고로 이 서명 자체는 <b>공격자 키로는 수학적으로 유효</b>하지만, 그 키는 이 동전 주인이 아니라 소용없어요.</span></div>`;
+    ? bOk
+      ? `<div><b>(b) 동의 확인</b> ✅ — 서명 <b>(r,s)</b>·sighash <b>z</b>·공개키 <b>Q</b>로 <span class="mono">R′ = z·s⁻¹·G + r·s⁻¹·Q</span> → <b>R′.x == r</b> 성립.</div>`
+      : `<div class="vfail"><b>(b) 동의 확인</b> ❌ — 서명이 이 sighash와 맞지 않습니다.</div>`
+    : `<div class="vskip"><b>(b) 동의 확인</b> — <span class="muted">(a)에서 이미 탈락해 확인까지 안 감. 이 서명은 서명자 키로는 수학적으로 유효하지만, 그 키가 동전 임자가 아니라 소용없어요.</span></div>`;
+
+  const cardCls = aOk && bOk ? "sig-input-card ok" : "sig-input-card bad";
+
+  return `
+  <div class="${cardCls}">
+    <div class="sig-input-head">
+      <span class="sig-input-no">입력 #${idx + 1}</span>
+      <span class="mono sig-input-outpoint" title="${esc(outpoint)}">출처 ${esc(
+    String(s.txid).slice(0, 10)
+  )}…:${s.vout}${copyBtn(outpoint, "inline-copy")}</span>
+      <span class="muted small">잠긴 주소 <span class="mono">${addrLabelHtml(s.lockAddress)}</span></span>
+    </div>
+
+    <div class="sig-mini">
+      <div class="sig-mini-h">1️⃣ 이 입력의 원문 → SHA-256 → sighash</div>
+      <div class="mono small sig-msg">${esc(s.message)}${copyBtn(s.message, "inline-copy")}</div>
+      <div class="sig-msg-legend">${sigMsgLegend(s.message, s.signerAddress)}</div>
+      <button class="btn ghost sm sig-hash-btn" data-msg="${esc(s.message)}" data-sighash="${esc(
+    s.sighash
+  )}" style="margin-top:6px">🔁 이 원문을 SHA-256으로 직접 돌려보기</button>
+      <div class="sig-sub-label" style="margin-top:6px">내 브라우저에서 계산한 SHA-256</div>
+      <div class="mono small sig-hash-calc"><span class="muted">위 버튼을 누르면 여기서 직접 계산해요.</span></div>
+      <div class="sig-sub-label" style="margin-top:6px">엔진이 실제 서명에 쓴 sighash</div>
+      <div class="mono small">${esc(s.sighash)}${copyBtn(s.sighash, "inline-copy")}</div>
+      <div class="sig-hash-cmp"></div>
+    </div>
+
+    <div class="sig-mini">
+      <div class="sig-mini-h">2️⃣ 개인키로 이 sighash에 서명 — ${esc(s.signerLabel || "(미상)")}</div>
+      <div class="muted small" style="margin-bottom:4px">개인키는 비밀이라 <b>화면에 안 나옵니다</b>. 결과 서명은 64바이트 = <b>r</b>(앞 32) ‖ <b>s</b>(뒤 32).</div>
+      <div class="sig-sub-label">서명 r <span class="muted">(앞 32바이트)</span></div>
+      <div class="mono small">${esc(rHex)}${copyBtn(rHex, "inline-copy")}</div>
+      <div class="sig-sub-label" style="margin-top:4px">서명 s <span class="muted">(뒤 32바이트)</span></div>
+      <div class="mono small">${esc(sHex)}${copyBtn(sHex, "inline-copy")}</div>
+      <div class="sig-sub-label" style="margin-top:4px">공개키 Q <span class="muted">(= 개인키 d × G · 33바이트 압축)</span></div>
+      <div class="mono small">${esc(s.pubkey)}${copyBtn(s.pubkey, "inline-copy")}</div>
+    </div>
+
+    <div class="sig-mini">
+      <div class="sig-mini-h">3️⃣ 공개키로 검증 <span class="muted">(개인키 없이, 누구나)</span></div>
+      <div class="sig-verify-rows">
+        ${aRow}
+        ${bRow}
+      </div>
+    </div>
+  </div>`;
+}
+
+// 서명/검증 블록 전체 HTML (입력마다 카드 하나. 실제 비트코인처럼 입력별 서명)
+function sigBlockHTML(r) {
+  const inputs = r.inputsSig || [];
+  const cards = inputs.map((s, i) => sigInputCardHTML(s, i)).join("");
+  const multi = inputs.length > 1;
 
   const verdict = r.verified
-    ? `<div class="sig-verdict ok">✅ 검증 통과 — (a) 공개키가 UTXO 주소와 일치하고, (b) 서명도 유효합니다. 거래가 적용되었습니다.</div>`
+    ? `<div class="sig-verdict ok">✅ 검증 통과 — 입력 ${inputs.length}개가 모두 (a) 주소 일치 + (b) 서명 유효. 거래가 적용되었습니다.</div>`
     : `<div class="sig-verdict bad">🚫 검증 실패 — ${esc(
         r.error || "서명이 유효하지 않습니다."
       )} 거래가 거부되어 동전은 그대로 안전합니다. 🔒</div>`;
 
   return `
     <div class="sig-title">🔏 디지털 서명 &amp; 검증 <span class="pill-tag">secp256k1 ECDSA</span></div>
-    <div class="sig-steps">
-      <div class="sig-step">
-        <div class="sig-step-no">1</div>
-        <div class="sig-step-body">
-          <div class="sig-step-h">서명 대상 원문 → SHA-256 → sighash</div>
-          <div class="muted small" style="margin-bottom:6px">거래 내용을 정해진 형식으로 <b>직렬화</b>(각 입력의 출처 + 각 출력의 주소·금액)한 <b>원문</b>을 SHA-256으로 요약한 게 sighash고, 개인키는 이 sighash에 서명해요.</div>
-          <div class="sig-sub-label">① 서명 대상 원문 (직렬화된 거래 내용)</div>
-          <div class="mono small sig-msg">${esc(msg)}</div>
-          <div class="sig-msg-legend">${sigMsgLegend(msg, derived)}</div>
-          <button class="btn ghost sm sig-hash-btn" data-msg="${esc(msg)}" data-sighash="${esc(
-    r.sighash
-  )}" style="margin-top:8px">🔁 이 원문을 SHA-256으로 직접 돌려보기</button>
-          <div class="sig-sub-label" style="margin-top:8px">② 내 브라우저에서 계산한 SHA-256</div>
-          <div class="mono small sig-hash-calc"><span class="muted">위 버튼을 누르면 여기서 직접 계산해요.</span></div>
-          <div class="sig-sub-label" style="margin-top:8px">③ 엔진이 실제 서명에 쓴 sighash</div>
-          <div class="mono small">${esc(r.sighash)}</div>
-          <div class="sig-hash-cmp"></div>
-        </div>
-      </div>
-      <div class="sig-step">
-        <div class="sig-step-no">2</div>
-        <div class="sig-step-body">
-          <div class="sig-step-h">개인키로 sighash에 서명 — ${esc(r.signerLabel)}</div>
-          <div class="muted small" style="margin-bottom:6px">ECDSA-secp256k1가 <b>재료 2개</b>(개인키 + sighash)를 받아 서명 1개를 만들어요. 개인키는 비밀이라 <b>화면에 안 나옵니다</b>. 결과 서명은 64바이트 = <b>r</b>(앞 32) ‖ <b>s</b>(뒤 32).</div>
-          <div class="sig-io">
-            <div class="sig-io-in">
-              <div>🔒 <b>${esc(r.signerLabel)}</b> 의 개인키 <span class="muted">(비밀 · 미표시)</span></div>
-              <div class="sig-io-plus">＋</div>
-              <div>sighash <span class="mono">${esc(r.sighash.slice(0, 16))}…</span></div>
-            </div>
-            <div class="sig-io-op">ECDSA<br/>secp256k1 ⚙️</div>
-            <div class="sig-io-out">
-              <div class="sig-sub-label">서명 r <span class="muted">(앞 32바이트)</span></div>
-              <div class="mono small">${esc(rHex)}</div>
-              <div class="sig-sub-label" style="margin-top:6px">서명 s <span class="muted">(뒤 32바이트)</span></div>
-              <div class="mono small">${esc(sHex)}</div>
-            </div>
-          </div>
-          <div class="muted small" style="margin-top:6px">이 데모(및 현대 비트코인)는 <b>RFC 6979 결정론적</b> 서명이라 같은 (개인키·sighash)면 항상 같은 서명. 개인키 없이는 못 만들지만, 공개키로는 누구나 검증할 수 있어요(3단계).</div>
-        </div>
-      </div>
-      <div class="sig-step">
-        <div class="sig-step-no">3</div>
-        <div class="sig-step-body">
-          <div class="sig-step-h">공개키로 검증 <span class="muted">(개인키 없이, 누구나)</span></div>
-          <div class="sig-sub-label">서명자 공개키 — 곡선 위의 점, <b>Q = 개인키 d × G</b> (33바이트 압축)</div>
-          <div class="mono small">${esc(r.pubkey)}</div>
-          <div class="muted small" style="margin:3px 0 6px">앞 <b>02/03</b> = 점의 y가 짝/홀, 뒤 64자리 = x좌표. <b>d→Q</b>는 쉽지만 <b>Q→d</b>(개인키 역산)는 불가능.</div>
-          <div class="sig-verify-rows">
-            ${aRow}
-            ${bRow}
-          </div>
-          <details class="aside" style="margin-top:8px">
-            <summary>🔍 (b) 이 식이 왜 "위조 불가 증명"이 되나요?</summary>
-            <div class="aside-body">
-              <p>서명자는 개인키 <b>d</b>와 무작위 <b>k</b>로 서명을 만들어요:</p>
-              <p class="mono small">r = (k·G).x  ·  s = k⁻¹·(z + r·d)  mod n</p>
-              <p>검증자는 <b>개인키 없이</b> 공개값만으로 <b>R′ = u₁·G + u₂·Q</b> (u₁=z·s⁻¹, u₂=r·s⁻¹)를 계산합니다. Q = d·G 를 대입하면 <b>R′ = k·G</b> 로 되돌아오고, 그때만 <b>R′.x == r</b>.</p>
-              <ul class="tight">
-                <li>등식이 맞으려면 <b>Q를 만든 그 d</b>로 <b>바로 이 z</b>에 서명했어야만 함.</li>
-                <li>거래 내용을 한 글자만 바꿔도 z가 달라져 → <b>R′.x ≠ r</b> → 거부.</li>
-                <li>다른 사람이 서명하면(다른 d·Q) 안 맞아 → 거부.</li>
-              </ul>
-              <p>핵심: <b>개인키 d를 한 번도 드러내지 않고</b> "d를 안다 + 이 거래에 동의한다"를 증명 — 이게 secp256k1 ECDSA예요.</p>
-            </div>
-          </details>
-        </div>
-      </div>
+    <div class="muted small" style="margin-bottom:10px">
+      실제 비트코인처럼 <b>입력(소비할 UTXO)마다 각자 서명</b>해요. 각 입력은 "거래 내용 + <b>지금 어느 입력을 쓰는지</b>"를 원문으로 삼아 SHA-256(→ sighash)한 뒤 개인키로 서명합니다. 그래서 <b>입력마다 sighash도 서명도 서로 달라요</b>.${
+        multi
+          ? ` (이번 거래는 입력 <b>${inputs.length}개</b> → 카드 ${inputs.length}장)`
+          : " (이번엔 입력이 1개예요 — 여러 개면 카드도 여러 장 생깁니다.)"
+      }
     </div>
+    <div class="sig-input-cards">${cards}</div>
+    <details class="aside" style="margin-top:10px">
+      <summary>🔍 (b) 이 검증식이 왜 "위조 불가 증명"이 되나요?</summary>
+      <div class="aside-body">
+        <p>서명자는 개인키 <b>d</b>와 일회용 <b>k</b>로 서명을 만들어요:</p>
+        <p class="mono small">r = (k·G).x  ·  s = k⁻¹·(z + r·d)  mod n</p>
+        <p>검증자는 <b>개인키 없이</b> 공개값만으로 <b>R′ = u₁·G + u₂·Q</b> (u₁=z·s⁻¹, u₂=r·s⁻¹)를 계산합니다. Q = d·G 를 대입하면 <b>R′ = k·G</b> 로 되돌아오고, 그때만 <b>R′.x == r</b>.</p>
+        <ul class="tight">
+          <li>등식이 맞으려면 <b>Q를 만든 그 d</b>로 <b>바로 이 z(sighash)</b>에 서명했어야만 함.</li>
+          <li>거래 내용을 한 글자만 바꿔도 z가 달라져 → <b>R′.x ≠ r</b> → 거부.</li>
+          <li>다른 사람이 서명하면(다른 d·Q) 안 맞아 → 거부.</li>
+        </ul>
+        <p class="muted small">참고: 이 데모(및 현대 비트코인)는 <b>RFC 6979 결정론적 k</b>라, <b>완전히 같은</b> (개인키·sighash)면 서명도 같아요. 그런데 입력마다 원문(sighash)이 달라서 서명도 서로 달라 보이는 거예요.</p>
+      </div>
+    </details>
     ${verdict}`;
 }
 

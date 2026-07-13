@@ -594,6 +594,8 @@ input[type="range"] { accent-color: var(--btc); padding: 0; }
 .coin .amt small { font-size: 10px; color: var(--muted); font-weight: 600; }
 .coin .id { font-family: var(--mono); font-size: 10px; color: var(--muted-2); margin-top: 2px; }
 .coin .role { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.coin .lock { font-family: var(--mono); font-size: 9.5px; color: var(--purple); margin-top: 3px; opacity: .9; }
+.coin .lock:hover .copy-btn.inline-copy { opacity: 1; }
 .coin.change { border-color: rgba(88,166,255,.5); background: radial-gradient(circle at 50% 30%, #16202e, #0f1620); }
 .coin.change .amt { color: var(--blue); }
 .coin.recipient { border-color: rgba(188,140,255,.5); background: radial-gradient(circle at 50% 30%, #221a2e, #160f20); }
@@ -648,6 +650,34 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .wallet .w-pub { color: var(--muted); word-break: break-all; }
 .wallet .w-bal { color: var(--btc-soft); font-weight: 700; }
 
+/* 복사 버튼 — 생략(…)된 값을 호버 시 전체 복사 */
+.copy-btn {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s ease, color .12s ease, border-color .12s ease;
+}
+.copy-btn:hover { color: var(--btc); border-color: var(--btc); }
+.copy-btn:focus-visible { outline: none; opacity: 1; color: var(--btc); border-color: var(--btc); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); opacity: 1; }
+
+/* 주소/공개키 옆 인라인 */
+.copy-btn.inline-copy { margin-left: 6px; vertical-align: middle; }
+.utxo-owner .who-addr:hover .copy-btn.inline-copy,
+.wallet .w-addr:hover .copy-btn.inline-copy,
+.wallet .w-pub:hover .copy-btn.inline-copy { opacity: 1; }
+
+/* 코인 칩 우상단 */
+.coin { position: relative; }
+.copy-btn.coin-copy { position: absolute; top: 3px; right: 3px; padding: 1px 4px; font-size: 10px; }
+.coin:hover .copy-btn.coin-copy { opacity: 1; }
+
 /* 서명 박스 */
 .sig-box {
   margin-top: 18px; padding: 16px; border-radius: 12px;
@@ -677,7 +707,31 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .sig-msg-legend > div { font-size: 12px; padding: 3px 8px; border-radius: 6px; }
 .sig-msg-legend .leg-in  { background: rgba(88,166,255,.10);  border-left: 3px solid var(--blue); color: #a9c9ff; }
 .sig-msg-legend .leg-out { background: rgba(63,185,80,.10);   border-left: 3px solid var(--green); color: #8fe0a0; }
+.sig-msg-legend .leg-spend { background: rgba(247,147,26,.10); border-left: 3px solid var(--btc); color: #f0c48a; }
 .sig-msg-legend .mono { background: transparent; border: 0; padding: 0; }
+
+/* 입력별 서명 카드 (실제 비트코인처럼 입력마다 각자 서명) */
+.sig-input-cards { display: flex; flex-direction: column; gap: 14px; }
+.sig-input-card {
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  background: var(--panel-2);
+  border-left: 4px solid var(--muted-2);
+}
+.sig-input-card.ok  { border-left-color: var(--green); }
+.sig-input-card.bad { border-left-color: var(--red); }
+.sig-input-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border-soft);
+}
+.sig-input-no {
+  font-weight: 800; font-size: 13px; color: var(--btc);
+  background: rgba(247,147,26,.12); border: 1px solid rgba(247,147,26,.4);
+  border-radius: 999px; padding: 2px 10px;
+}
+.sig-input-outpoint { font-size: 12px; color: var(--purple); }
+.sig-mini { margin-top: 12px; }
+.sig-mini:first-of-type { margin-top: 0; }
+.sig-mini-h { font-weight: 700; font-size: 13.5px; color: var(--text); margin-bottom: 6px; }
 .sig-hash-cmp { margin-top: 8px; }
 .sig-hash-cmp .cmp { display: block; font-size: 12.5px; padding: 8px 11px; border-radius: 8px; line-height: 1.5; }
 .sig-hash-cmp .cmp.ok  { background: rgba(63,185,80,.12);  border: 1px solid rgba(63,185,80,.45);  color: #6ee787; }

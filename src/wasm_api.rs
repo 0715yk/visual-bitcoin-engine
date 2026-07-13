@@ -331,6 +331,20 @@ fn send_result_json(r: &SendResult) -> String {
         "signerAddress": r.signer_address,
         "lockAddress": r.lock_address,
         "verified": r.verified,
+        // --- 입력별 서명 상세 (실제 비트코인처럼 입력마다 각자 서명) ---
+        "inputsSig": r.inputs_sig.iter().map(|s| serde_json::json!({
+            "txid": s.txid,
+            "vout": s.vout,
+            "message": s.message,
+            "sighash": s.sighash,
+            "signature": s.signature,
+            "pubkey": s.pubkey,
+            "signerLabel": s.signer_label,
+            "signerAddress": s.signer_address,
+            "lockAddress": s.lock_address,
+            "ownerOk": s.owner_ok,
+            "sigOk": s.sig_ok,
+        })).collect::<Vec<_>>(),
     })
     .to_string()
 }

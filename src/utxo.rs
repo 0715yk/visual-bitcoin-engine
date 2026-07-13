@@ -112,6 +112,23 @@ pub struct Input {
     pub pubkey: String,
 }
 
+// 입력(소비할 UTXO) 하나에 대한 서명·검증 상세 (화면 카드용)
+// 실제 비트코인처럼 "입력마다 각자 서명"하므로 입력 개수만큼 생긴다.
+#[derive(Clone, serde::Serialize)]
+pub struct InputSig {
+    pub txid: String,
+    pub vout: u32,
+    pub message: String,       // 이 입력이 서명한 원문(직렬화). SHA-256하면 sighash
+    pub sighash: String,       // 이 입력의 sighash
+    pub signature: String,     // 이 입력의 서명(hex, r‖s)
+    pub pubkey: String,        // 서명에 쓴 공개키(hex)
+    pub signer_label: String,  // 그 공개키 주인의 라벨(있으면)
+    pub signer_address: String, // 공개키를 해시한 주소
+    pub lock_address: String,  // 이 입력이 가리키는 UTXO가 잠긴 주소
+    pub owner_ok: bool,        // (a) 주인 확인: signer_address == lock_address
+    pub sig_ok: bool,          // (b) 동의 확인: 서명이 메시지에 대해 유효
+}
+
 // 송금 한 건의 전체 내역 (화면 시각화용)
 pub struct SendResult {
     pub ok: bool,
@@ -131,6 +148,9 @@ pub struct SendResult {
     pub signer_address: String, // 서명자의 주소
     pub lock_address: String,  // 소비하려는 UTXO가 잠긴 주소
     pub verified: bool,        // 서명 검증 통과 여부
+
+    // --- 입력별 서명 상세 (실제 비트코인처럼 입력마다 각자 서명) ---
+    pub inputs_sig: Vec<InputSig>,
 }
 
 impl SendResult {
@@ -151,6 +171,7 @@ impl SendResult {
             signer_address: String::new(),
             lock_address: String::new(),
             verified: false,
+            inputs_sig: vec![],
         }
     }
 }
@@ -239,7 +260,7 @@ impl UtxoEngine {
         sha256_hex(&s)
     }
 
-    // 서명 대상 메시지(입력이 가리키는 출처 + 출력들) — 서명은 이 내용에 대해 한다.
+    // 거래 공통부(모든 입력의 출처 + 모든 출력) — 모든 입력의 서명이 공유하는 뼈대.
     fn tx_message(inputs: &[Input], outputs: &[Output]) -> String {
         let mut s = String::new();
         for i in inputs {
@@ -249,6 +270,65 @@ impl UtxoEngine {
             s.push_str(&format!("out:{}:{};", o.address, o.amount));
         }
         s
+    }
+
+    // 특정 입력 하나가 실제로 서명하는 원문.
+    // = 거래 공통부 + "지금 서명 중인 입력이 어느 것인지"(spending) 를 덧붙인다.
+    // 이렇게 하면 입력마다 sighash가 달라져, 입력별로 서로 다른 서명이 생긴다.
+    // (실제 비트코인의 SIGHASH_ALL이 입력별 scriptCode를 함께 커밋하는 것에 대응)
+    fn input_message(inputs: &[Input], outputs: &[Output], txid: &str, vout: u32) -> String {
+        let mut s = Self::tx_message(inputs, outputs);
+        s.push_str(&format!("spending:{txid}:{vout};"));
+        s
+    }
+
+    // 각 입력에 대한 서명·검증 상세(InputSig)를 만든다.
+    // 입력마다: (a) 제시한 공개키의 주소 == UTXO 잠긴 주소?  (b) 서명이 그 입력의 메시지에 유효?
+    fn build_input_sigs(&self, inputs: &[Input], outputs: &[Output]) -> Vec<InputSig> {
+        inputs
+            .iter()
+            .map(|inp| {
+                let message = Self::input_message(inputs, outputs, &inp.txid, inp.vout);
+                let sighash = sha256_hex(&message);
+
+                let lock_address = self
+                    .utxos
+                    .get(&Utxo::key(&inp.txid, inp.vout))
+                    .map(|u| u.address.clone())
+                    .unwrap_or_default();
+
+                let signer_address = if inp.pubkey.is_empty() {
+                    String::new()
+                } else {
+                    address_from_pubkey_hex(&inp.pubkey)
+                };
+                let owner_ok = !lock_address.is_empty() && signer_address == lock_address;
+
+                // (b) 서명이 이 입력의 메시지에 대해 수학적으로 유효한가?
+                let sig_ok = (|| -> Option<bool> {
+                    let vk = VerifyingKey::from_sec1_bytes(&from_hex(&inp.pubkey)).ok()?;
+                    let sig = Signature::from_slice(&from_hex(&inp.signature)).ok()?;
+                    Some(vk.verify(message.as_bytes(), &sig).is_ok())
+                })()
+                .unwrap_or(false);
+
+                let signer_label = self.label_of(&signer_address).unwrap_or_default();
+
+                InputSig {
+                    txid: inp.txid.clone(),
+                    vout: inp.vout,
+                    message,
+                    sighash,
+                    signature: inp.signature.clone(),
+                    pubkey: inp.pubkey.clone(),
+                    signer_label,
+                    signer_address,
+                    lock_address,
+                    owner_ok,
+                    sig_ok,
+                }
+            })
+            .collect()
     }
 
     // ============================================================
@@ -311,32 +391,43 @@ impl UtxoEngine {
         Ok((selected, sum))
     }
 
-    // 서명 검증: 각 입력의 (공개키, 서명)이 (UTXO가 잠긴 주소, 메시지)에 대해 유효한가?
-    fn verify_inputs(&self, inputs: &[Input], message: &str) -> Result<(), String> {
-        for inp in inputs {
-            let utxo = self
-                .utxos
-                .get(&Utxo::key(&inp.txid, inp.vout))
-                .ok_or_else(|| "존재하지 않거나 이미 쓰인 UTXO를 가리킵니다.".to_string())?;
+    // 입력마다 각자 서명한다(실제 비트코인 방식).
+    // 각 입력은 "그 입력의 메시지"(공통부 + 어느 입력을 쓰는지)에 대해 개인키로 서명하고,
+    // (서명, 공개키)를 자기 입력에 채운다. 입력별로 메시지가 달라 서명도 서로 다르다.
+    fn sign_inputs(inputs: &mut [Input], outputs: &[Output], sk: &SigningKey, pubkey: &str) {
+        // 출처(txid:vout)는 서명 과정에서 바뀌지 않으므로 스냅샷으로 메시지를 만든다.
+        let snapshot: Vec<Input> = inputs.to_vec();
+        for inp in inputs.iter_mut() {
+            let msg = Self::input_message(&snapshot, outputs, &inp.txid, inp.vout);
+            let sig: Signature = sk.sign(msg.as_bytes());
+            inp.signature = to_hex(&sig.to_bytes());
+            inp.pubkey = pubkey.to_string();
+        }
+    }
 
-            // (1) 제시한 공개키가 정말 그 UTXO의 주소로 유도되는가?
-            let derived = address_from_pubkey_hex(&inp.pubkey);
-            if derived != utxo.address {
-                return Err(format!(
-                    "서명한 키의 주소({derived})가 UTXO 소유자 주소({})와 다릅니다 → 남의 동전입니다.",
-                    utxo.address
-                ));
+    // 입력별 검증 결과로부터 전체 통과 여부와 첫 실패 사유를 뽑는다.
+    fn overall_verdict(sigs: &[InputSig]) -> (bool, Option<String>) {
+        if sigs.is_empty() {
+            return (false, Some("서명할 입력이 없습니다.".to_string()));
+        }
+        for s in sigs {
+            if !s.owner_ok {
+                return (
+                    false,
+                    Some(format!(
+                        "서명한 키의 주소({})가 UTXO 소유자 주소({})와 다릅니다 → 남의 동전입니다.",
+                        s.signer_address, s.lock_address
+                    )),
+                );
             }
-            // (2) 서명이 메시지에 대해 수학적으로 유효한가?
-            let vk = VerifyingKey::from_sec1_bytes(&from_hex(&inp.pubkey))
-                .map_err(|_| "공개키 형식이 잘못되었습니다.".to_string())?;
-            let sig = Signature::from_slice(&from_hex(&inp.signature))
-                .map_err(|_| "서명 형식이 잘못되었습니다.".to_string())?;
-            if vk.verify(message.as_bytes(), &sig).is_err() {
-                return Err("서명이 메시지와 맞지 않습니다(검증 실패).".to_string());
+            if !s.sig_ok {
+                return (
+                    false,
+                    Some("서명이 메시지와 맞지 않습니다(검증 실패).".to_string()),
+                );
             }
         }
-        Ok(())
+        (true, None)
     }
 
     // ============================================================
@@ -384,22 +475,23 @@ impl UtxoEngine {
             })
             .collect();
 
-        // 서명 대상 메시지 + 서명
-        let message = Self::tx_message(&inputs, &outputs);
-        let sighash = sha256_hex(&message);
-        let sig: Signature = self.wallets[from_label].sk.sign(message.as_bytes());
-        let sig_hex = to_hex(&sig.to_bytes());
+        // 입력마다 자기 개인키로 "그 입력의 메시지"에 각각 서명 (실제 비트코인 방식)
+        Self::sign_inputs(&mut inputs, &outputs, &self.wallets[from_label].sk, &from_pub);
 
-        // 입력마다 서명/공개키 첨부
-        for inp in inputs.iter_mut() {
-            inp.signature = sig_hex.clone();
-            inp.pubkey = from_pub.clone();
+        // 입력별 서명·검증 상세 (UTXO를 제거하기 전에 계산 — 잠긴 주소를 조회해야 함)
+        let inputs_sig = self.build_input_sigs(&inputs, &outputs);
+        let (all_ok, fail_reason) = Self::overall_verdict(&inputs_sig);
+        if !all_ok {
+            return SendResult::fail(&format!(
+                "검증 실패: {}",
+                fail_reason.unwrap_or_default()
+            ));
         }
 
-        // 검증 (정상 거래이므로 통과)
-        if let Err(e) = self.verify_inputs(&inputs, &message) {
-            return SendResult::fail(&format!("검증 실패: {e}"));
-        }
+        // 대표값(요약 표시용) — 첫 입력 기준
+        let rep_message = inputs_sig.first().map(|s| s.message.clone()).unwrap_or_default();
+        let rep_sighash = inputs_sig.first().map(|s| s.sighash.clone()).unwrap_or_default();
+        let rep_sig = inputs_sig.first().map(|s| s.signature.clone()).unwrap_or_default();
 
         let txid = self.make_txid(&inputs, &outputs, "tx");
 
@@ -436,14 +528,15 @@ impl UtxoEngine {
             created,
             fee,
             selected_sum: sum,
-            message,
-            sighash,
-            signature: sig_hex,
+            message: rep_message,
+            sighash: rep_sighash,
+            signature: rep_sig,
             pubkey: from_pub,
             signer_label: from_label.to_string(),
             signer_address: from_addr.clone(),
             lock_address: from_addr,
             verified: true,
+            inputs_sig,
         }
     }
 
@@ -495,18 +588,13 @@ impl UtxoEngine {
             })
             .collect();
 
-        let message = Self::tx_message(&inputs, &outputs);
-        let sighash = sha256_hex(&message);
-        // 도둑은 자기 키로 서명 (피해자 키가 없으니까)
-        let sig: Signature = self.wallets[attacker_label].sk.sign(message.as_bytes());
-        let sig_hex = to_hex(&sig.to_bytes());
-        for inp in inputs.iter_mut() {
-            inp.signature = sig_hex.clone();
-            inp.pubkey = attacker_pub.clone();
-        }
+        // 도둑은 자기 키로 각 입력에 서명 (피해자 개인키가 없으니까)
+        Self::sign_inputs(&mut inputs, &outputs, &self.wallets[attacker_label].sk, &attacker_pub);
 
-        // 검증 → 실패해야 정상
-        let verify = self.verify_inputs(&inputs, &message);
+        // 입력별 검증 상세 — 도둑 키의 주소 != 피해자 주소이므로 owner_ok=false 로 거부됨
+        let inputs_sig = self.build_input_sigs(&inputs, &outputs);
+        let (all_ok, fail_reason) = Self::overall_verdict(&inputs_sig);
+
         let created: Vec<(Utxo, bool)> = outputs
             .iter()
             .enumerate()
@@ -523,34 +611,37 @@ impl UtxoEngine {
             })
             .collect();
 
-        match verify {
-            Ok(()) => {
-                // 일어나면 안 되는 경우 (예: attacker==victim)
-                self.log("[경고] 위조 시도가 검증을 통과했습니다(공격자=피해자?).".to_string());
-                SendResult::fail("이 경우는 사실상 본인 거래입니다.")
-            }
-            Err(reason) => {
-                self.log(format!(
-                    "[위조 거부] {attacker_label}가 {victim_label}의 동전을 훔치려 함 → {reason}"
-                ));
-                SendResult {
-                    ok: false,
-                    error: Some(reason),
-                    txid: String::new(),
-                    spent: selected,
-                    created,
-                    fee: 0.0,
-                    selected_sum: sum,
-                    message,
-                    sighash,
-                    signature: sig_hex,
-                    pubkey: attacker_pub,
-                    signer_label: attacker_label.to_string(),
-                    signer_address: attacker_addr,
-                    lock_address: victim_addr,
-                    verified: false,
-                }
-            }
+        let rep_message = inputs_sig.first().map(|s| s.message.clone()).unwrap_or_default();
+        let rep_sighash = inputs_sig.first().map(|s| s.sighash.clone()).unwrap_or_default();
+        let rep_sig = inputs_sig.first().map(|s| s.signature.clone()).unwrap_or_default();
+
+        if all_ok {
+            // 일어나면 안 되는 경우 (예: attacker==victim)
+            self.log("[경고] 위조 시도가 검증을 통과했습니다(공격자=피해자?).".to_string());
+            return SendResult::fail("이 경우는 사실상 본인 거래입니다.");
+        }
+
+        let reason = fail_reason.unwrap_or_else(|| "검증 실패".to_string());
+        self.log(format!(
+            "[위조 거부] {attacker_label}가 {victim_label}의 동전을 훔치려 함 → {reason}"
+        ));
+        SendResult {
+            ok: false,
+            error: Some(reason),
+            txid: String::new(),
+            spent: selected,
+            created,
+            fee: 0.0,
+            selected_sum: sum,
+            message: rep_message,
+            sighash: rep_sighash,
+            signature: rep_sig,
+            pubkey: attacker_pub,
+            signer_label: attacker_label.to_string(),
+            signer_address: attacker_addr,
+            lock_address: victim_addr,
+            verified: false,
+            inputs_sig,
         }
     }
 }
