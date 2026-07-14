@@ -28,6 +28,8 @@
       <button class="tab-btn" data-tab="chain">3 · 블록체인 시뮬레이터</button>
       <button class="tab-btn" data-tab="utxo">4 · UTXO 모델</button>
       <button class="tab-btn" data-tab="anatomy">5 · 블록 해부</button>
+      <button class="tab-btn" data-tab="network">6 · 노드 합의 (P2P)</button>
+      <button class="tab-btn" data-tab="attack">7 · 이중지불 공격</button>
     </nav>
 
     <!-- ============================================================
@@ -663,6 +665,102 @@ Coinbase -> Miner : 6.25</textarea>
           <div class="cmp-row"><span class="cmp-tag">target　 </span><span class="mono" id="anCmpTarget">—</span></div>
           <div class="cmp-verdict" id="anCmpVerdict">아직 채굴 전</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 6: 노드 합의 (P2P)
+         ============================================================ -->
+    <section class="tab-panel" id="tab-network">
+      <div class="card">
+        <h2>노드는 여러 대예요. "누구 체인이 진짜냐"는 규칙으로 정해집니다</h2>
+        <p class="lead">지금까지의 탭은 전부 <b>노드 1대의 내부 동작</b>이었어요. 하지만 진짜 비트코인은 수만 대의 노드가 각자 자기 체인을 들고, 서로 블록을 주고받으며 합의합니다. 중앙 서버도, 심판도 없어요. 대신 딱 하나의 규칙으로 정리되죠 — <b>가장 길고 유효한 체인이 이긴다.</b></p>
+        <div class="callout why">
+          <b>노드끼리의 규칙 (합의 프로토콜)</b>
+          <ol class="rule-list">
+            <li><b>같은 뿌리</b> — 모든 노드는 동일한 <b>제네시스 블록</b>에서 출발해요. 그래야 서로의 체인을 비교할 수 있어요.</li>
+            <li><b>채굴 = 자기만의 블록</b> — 노드가 블록을 캐면 <b>일단 자기만</b> 알아요. 방송하기 전엔 남들은 몰라요.</li>
+            <li><b>방송(P2P gossip)</b> — 캔 블록/체인을 이웃에게 퍼뜨려요. 이웃은 또 자기 이웃에게 전달하며 네트워크 전체로 번져요.</li>
+            <li><b>가장 긴 체인 채택</b> — 더 길고 <b>유효한</b>(해시·연결·PoW가 맞는) 체인을 받으면 자기 걸 버리고 갈아탑니다(<b>재구성 / reorg</b>).</li>
+            <li><b>포크 & orphan</b> — 두 노드가 동시에 같은 높이 블록을 캐면 <b>포크</b>가 생겨 잠깐 공존해요. 다음 블록이 한쪽에 붙는 순간 그쪽이 이기고, 진 블록은 <b>버려집니다(orphan/stale)</b>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row net-controls">
+          <label class="field"><span class="lbl-row">노드 수</span>
+            <input id="netNodeCount" type="number" min="2" max="5" value="3" style="width:90px" />
+          </label>
+          <label class="field"><span class="lbl-row">난이도(선행 0) <span class="hint" title="블록 해시 앞에 와야 하는 0의 개수. 크면 채굴이 조금 느려집니다. 2~4 권장.">?</span></span>
+            <input id="netDifficulty" type="number" min="1" max="5" value="3" style="width:90px" />
+          </label>
+          <button class="btn primary" id="netResetBtn">네트워크 초기화</button>
+          <button class="btn" id="netScenarioBtn" title="포크 → 재구성(reorg)이 일어나는 과정을 자동으로 시연합니다">▶ 포크·재구성 시나리오 자동 시연</button>
+        </div>
+        <p class="small muted" id="netHint" style="margin-top:8px">각 노드에서 <b>채굴</b>해 블록을 붙이고, <b>방송</b>으로 이웃에게 퍼뜨려 보세요. 두 노드에서 각각 캐면 포크가 생기고, 한쪽을 더 길게 만든 뒤 방송하면 재구성(reorg)이 일어납니다.</p>
+      </div>
+
+      <div id="netNodes" class="net-nodes"></div>
+
+      <div class="card">
+        <h2>네트워크 로그</h2>
+        <div id="netLog" class="net-log"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 7: 이중지불 공격 (51% attack)
+         ============================================================ -->
+    <section class="tab-panel" id="tab-attack">
+      <div class="card">
+        <h2>"가장 긴 체인이 이긴다"를 악용하면 — 이중지불 공격</h2>
+        <p class="lead">공격자는 <b>같은 코인을 두 번</b> 씁니다. 하나는 상점에게 결제로 보내(공개 체인), 상점이 물건을 내주면 — 몰래 파놓은 <b>비밀 체인</b>(결제가 없는 다른 역사)을 공개해 버려요. 비밀 체인이 더 길면 네트워크는 그쪽으로 <b>재구성(reorg)</b>되고, 결제는 <b>없던 일</b>이 됩니다. 상점은 물건도 돈도 잃죠.</p>
+        <div class="callout warn">
+          <b>공격이 성공하려면</b> 공격자가 정직한 네트워크보다 블록을 <b>더 빨리</b> 캐야 해요(= <b>51% 해시파워</b>). 그리고 상점이 <b>컨펌을 많이 기다릴수록</b> 공격자가 그만큼 더 앞서야 하니 성공이 어려워집니다. "왜 6컨펌을 기다리라는가"가 여기서 나와요.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row net-controls">
+          <label class="field"><span class="lbl-row">난이도(선행 0)</span>
+            <input id="dsDifficulty" type="number" min="1" max="5" value="3" style="width:90px" />
+          </label>
+          <label class="field"><span class="lbl-row">상점 요구 컨펌 <span class="hint" title="상점이 결제 후 몇 개의 블록이 쌓이길 기다렸다 물건을 내주는지. 크면 공격이 어려워집니다.">?</span></span>
+            <input id="dsConf" type="number" min="1" max="6" value="1" style="width:90px" />
+          </label>
+          <button class="btn primary" id="dsResetBtn">초기화</button>
+          <button class="btn" id="dsScenarioBtn" title="결제 → 몰래 채굴 → 공개(reorg)로 결제가 뒤집히는 과정을 자동 재생">▶ 공격 성공 시나리오 자동 시연</button>
+        </div>
+
+        <div class="ds-actions">
+          <button class="btn" id="dsPayBtn">① 결제 방송 (공격자→상점 10 BTC)</button>
+          <button class="btn" id="dsHonestBtn">정직한 채굴 ⛏</button>
+          <button class="btn" id="dsAttackBtn">공격자 몰래 채굴 😈</button>
+          <button class="btn danger" id="dsRevealBtn">💥 비밀 체인 공개 (reveal)</button>
+        </div>
+      </div>
+
+      <!-- 상태판: 상점 잔액 / 컨펌 / 배송 / 판정 -->
+      <div class="ds-status" id="dsStatus"></div>
+
+      <!-- 두 갈래 체인 -->
+      <div class="card">
+        <div class="ds-lane-wrap">
+          <div class="ds-lane" id="dsPublicLane">
+            <div class="ds-lane-head"><span class="ds-lane-title good">🟢 정직한 공개 체인</span><span class="ds-lane-sub">네트워크가 인정하는 체인</span></div>
+            <div class="net-chain-scroll"><div class="net-chain" id="dsPublicChain"></div></div>
+          </div>
+          <div class="ds-lane" id="dsAttackerLane">
+            <div class="ds-lane-head"><span class="ds-lane-title bad">😈 공격자 비밀 체인</span><span class="ds-lane-sub" id="dsAttackerSub">공개 전까지 아무도 모름</span></div>
+            <div class="net-chain-scroll"><div class="net-chain" id="dsAttackerChain"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>공격 로그</h2>
+        <div id="dsLog" class="net-log"></div>
       </div>
     </section>
 

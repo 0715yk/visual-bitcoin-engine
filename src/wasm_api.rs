@@ -543,3 +543,185 @@ impl WasmHeaderMiner {
         .to_string()
     }
 }
+
+// ============================================================
+// 노드 합의 / P2P (6번 탭) — 여러 노드 · 방송 · 가장 긴 체인
+// ============================================================
+use crate::network::Network;
+
+#[wasm_bindgen]
+pub struct WasmNetwork {
+    net: Network,
+}
+
+#[wasm_bindgen]
+impl WasmNetwork {
+    // names_json: 노드 이름 배열(JSON). difficulty: PoW 난이도(선행 0 개수).
+    #[wasm_bindgen(constructor)]
+    pub fn new(names_json: &str, difficulty: usize) -> WasmNetwork {
+        let names: Vec<String> = serde_json::from_str(names_json)
+            .unwrap_or_else(|_| vec!["Node A".into(), "Node B".into(), "Node C".into()]);
+        let diff = difficulty.clamp(1, 5);
+        WasmNetwork {
+            net: Network::new(&names, diff),
+        }
+    }
+
+    // idx번 노드가 블록을 채굴(자기 체인 끝에 추가). 새 스냅샷 반환.
+    pub fn mine_on(&mut self, idx: usize) -> String {
+        self.net.mine_on(idx);
+        self.snapshot()
+    }
+
+    // from번 노드가 자기 체인을 이웃에게 방송. 합의 후 스냅샷 반환.
+    pub fn broadcast(&mut self, from: usize) -> String {
+        self.net.broadcast(from);
+        self.snapshot()
+    }
+
+    // 모든 노드의 체인 상태(화면 렌더용).
+    pub fn snapshot(&self) -> String {
+        let nodes: Vec<serde_json::Value> = self
+            .net
+            .nodes()
+            .iter()
+            .map(|n| {
+                let blocks: Vec<serde_json::Value> = n
+                    .chain
+                    .iter()
+                    .map(|b| {
+                        let miner = b
+                            .transactions
+                            .iter()
+                            .find(|t| t.is_coinbase())
+                            .map(|t| t.to.clone())
+                            .unwrap_or_default();
+                        serde_json::json!({
+                            "id": b.id,
+                            "hash": b.hash,
+                            "prevHash": b.previous_hash,
+                            "nonce": b.nonce,
+                            "miner": miner,
+                            "isGenesis": b.id == 0,
+                        })
+                    })
+                    .collect();
+                serde_json::json!({
+                    "name": n.name,
+                    "height": n.chain.len().saturating_sub(1),
+                    "tip": n.chain.last().map(|b| b.hash.clone()).unwrap_or_default(),
+                    "blocks": blocks,
+                })
+            })
+            .collect();
+
+        serde_json::json!({
+            "difficulty": self.net.difficulty(),
+            "nodes": nodes,
+        })
+        .to_string()
+    }
+
+    pub fn take_logs(&mut self) -> String {
+        let logs = self.net.drain_logs();
+        serde_json::to_string(&logs).unwrap_or_else(|_| "[]".to_string())
+    }
+}
+
+// ============================================================
+// 이중지불 공격 (7번 탭) — 공개 체인 vs 공격자 비밀 체인
+// ============================================================
+use crate::attack::DoubleSpend;
+use crate::block::Block as EngBlock;
+
+fn ds_block_json(b: &EngBlock) -> serde_json::Value {
+    let miner = b
+        .transactions
+        .iter()
+        .find(|t| t.is_coinbase())
+        .map(|t| t.to.clone())
+        .unwrap_or_default();
+    let txs: Vec<serde_json::Value> = b
+        .transactions
+        .iter()
+        .map(|t| {
+            serde_json::json!({
+                "from": t.from,
+                "to": t.to,
+                "amount": t.amount,
+                "isCoinbase": t.is_coinbase(),
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "id": b.id,
+        "hash": b.hash,
+        "prevHash": b.previous_hash,
+        "nonce": b.nonce,
+        "miner": miner,
+        "isGenesis": b.id == 0,
+        "txs": txs,
+    })
+}
+
+#[wasm_bindgen]
+pub struct WasmDoubleSpend {
+    ds: DoubleSpend,
+}
+
+#[wasm_bindgen]
+impl WasmDoubleSpend {
+    #[wasm_bindgen(constructor)]
+    pub fn new(difficulty: usize, required_conf: usize) -> WasmDoubleSpend {
+        WasmDoubleSpend {
+            ds: DoubleSpend::new(difficulty, required_conf),
+        }
+    }
+
+    pub fn start_payment(&mut self) -> String {
+        self.ds.start_payment();
+        self.snapshot()
+    }
+
+    pub fn honest_mine(&mut self) -> String {
+        self.ds.honest_mine();
+        self.snapshot()
+    }
+
+    pub fn attacker_mine(&mut self) -> String {
+        self.ds.attacker_mine();
+        self.snapshot()
+    }
+
+    pub fn reveal(&mut self) -> String {
+        self.ds.reveal();
+        self.snapshot()
+    }
+
+    pub fn snapshot(&self) -> String {
+        let public_blocks: Vec<serde_json::Value> =
+            self.ds.public_chain().iter().map(ds_block_json).collect();
+        let attacker_blocks: Vec<serde_json::Value> =
+            self.ds.attacker_chain().iter().map(ds_block_json).collect();
+
+        serde_json::json!({
+            "difficulty": self.ds.difficulty(),
+            "requiredConf": self.ds.required_conf(),
+            "forkLen": self.ds.fork_len(),
+            "started": self.ds.started(),
+            "shipped": self.ds.shipped(),
+            "revealed": self.ds.revealed(),
+            "attackWon": self.ds.attack_won(),
+            "confirmations": self.ds.confirmations_pub(),
+            "merchantBalance": self.ds.merchant_balance_pub(),
+            "publicChain": public_blocks,
+            "attackerChain": attacker_blocks,
+        })
+        .to_string()
+    }
+
+    pub fn take_logs(&mut self) -> String {
+        let logs = self.ds.drain_logs();
+        serde_json::to_string(&logs).unwrap_or_else(|_| "[]".to_string())
+    }
+}

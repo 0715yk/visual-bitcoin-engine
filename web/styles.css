@@ -866,3 +866,127 @@ textarea:focus { outline: none; border-color: var(--btc); }
 .cmp-verdict.ok { color: #6ee787; background: rgba(63,185,80,.12); border-color: rgba(63,185,80,.45); }
 .cmp-verdict.bad { color: var(--muted); }
 .cmp .lead0, .dsha-cell .lead0, .cmp-row .lead0 { color: var(--btc); font-weight: 800; }
+
+/* ============================================================
+   6번 탭: 노드 합의 (P2P)
+   ============================================================ */
+.rule-list { margin: 8px 0 0; padding-left: 20px; }
+.rule-list li { margin: 6px 0; font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+.rule-list li b { color: var(--text); }
+
+.net-controls { align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+
+.net-nodes { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 18px; }
+
+.net-node {
+  background: linear-gradient(180deg, var(--panel), var(--bg-soft));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.net-node.is-longest { border-color: rgba(247,147,26,.55); box-shadow: 0 0 0 1px rgba(247,147,26,.18) inset; }
+
+.net-node-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.net-node-name { font-weight: 800; font-size: 15px; color: var(--text); }
+.net-node-height { font-size: 12px; color: var(--muted); }
+.net-node-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.net-chain-scroll { overflow-x: auto; padding-bottom: 4px; }
+.net-chain { display: flex; align-items: stretch; gap: 0; min-width: min-content; }
+
+.net-block {
+  min-width: 132px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.net-block.nb-genesis { border-color: var(--muted-2); background: var(--bg-soft); }
+.net-block.nb-agreed { border-color: rgba(63,185,80,.45); background: rgba(63,185,80,.07); }
+.net-block.nb-fork { border-color: rgba(188,140,255,.5); background: rgba(188,140,255,.09); }
+.net-block.nb-tip { box-shadow: 0 0 0 2px rgba(247,147,26,.35); }
+
+.nb-id { font-weight: 800; font-size: 12.5px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.nb-forktag { font-size: 10px; font-weight: 700; color: #d6b6ff; background: rgba(188,140,255,.18); border: 1px solid rgba(188,140,255,.4); border-radius: 5px; padding: 0 5px; }
+.nb-miner { font-size: 11px; color: var(--btc-soft); }
+.nb-hash { font-size: 11px; color: var(--muted); word-break: break-all; display: flex; align-items: center; gap: 4px; }
+
+.net-link { align-self: center; color: var(--muted-2); font-size: 16px; padding: 0 6px; user-select: none; }
+
+button.btn.sm.green { background: linear-gradient(145deg, #3fb950, #2ea043); border-color: #2ea043; color: #06210c; }
+
+.net-log {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+.net-log-line { color: var(--muted); padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+.net-log-line.lg-mine { color: var(--btc-soft); }
+.net-log-line.lg-cast { color: var(--blue); }
+.net-log-line.lg-fork { color: var(--purple); }
+.net-log-line.lg-reorg { color: #ffb454; font-weight: 700; }
+.net-log-line.lg-bad { color: var(--red); }
+.net-log-line.lg-good { color: #6ee787; font-weight: 700; }
+
+/* ============================================================
+   7번 탭: 이중지불 공격
+   ============================================================ */
+.ds-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.ds-status { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+.ds-stat {
+  background: linear-gradient(180deg, var(--panel), var(--bg-soft));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 150px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ds-stat-k { font-size: 11.5px; color: var(--muted); }
+.ds-stat-v { font-size: 16px; font-weight: 800; color: var(--text); }
+.ds-stat-v.good { color: #6ee787; }
+.ds-stat-v.bad { color: var(--red); }
+.ds-race { font-size: 11px; font-weight: 700; color: #ffb454; }
+
+.ds-verdict {
+  flex-basis: 100%;
+  border-radius: 10px; padding: 12px 16px; font-weight: 800; font-size: 15px;
+  border: 1px solid var(--border);
+}
+.ds-verdict.bad { color: #ff8983; background: rgba(248,81,73,.12); border-color: rgba(248,81,73,.5); }
+.ds-verdict.good { color: #6ee787; background: rgba(63,185,80,.12); border-color: rgba(63,185,80,.45); }
+.ds-verdict.warn { color: #ffb454; background: rgba(247,147,26,.1); border-color: rgba(247,147,26,.45); }
+
+.ds-lane-wrap { display: flex; flex-direction: column; gap: 14px; }
+.ds-lane { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg-soft); }
+.ds-lane.revealed { border-color: rgba(248,81,73,.55); box-shadow: 0 0 0 1px rgba(248,81,73,.18) inset; }
+.ds-lane-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.ds-lane-title { font-weight: 800; font-size: 14px; }
+.ds-lane-title.good { color: #6ee787; }
+.ds-lane-title.bad { color: #ff8983; }
+.ds-lane-sub { font-size: 11.5px; color: var(--muted); }
+
+.ds-empty { color: var(--muted); font-size: 13px; padding: 14px 4px; }
+
+.net-block.ds-block { min-width: 168px; }
+.net-block.ds-pub { border-color: rgba(63,185,80,.45); background: rgba(63,185,80,.06); }
+.net-block.ds-atk { border-color: rgba(248,81,73,.5); background: rgba(248,81,73,.08); }
+
+.ds-txs { display: flex; flex-direction: column; gap: 3px; }
+.ds-tx { font-size: 11px; font-family: var(--mono); color: var(--muted); border-radius: 5px; padding: 1px 5px; }
+.ds-tx-cb { color: var(--btc-soft); }
+.ds-tx-normal { color: var(--text); }
+.ds-tx-pay { color: #6ee787; background: rgba(63,185,80,.14); border: 1px solid rgba(63,185,80,.4); }
+.ds-tx-fraud { color: #ff8983; background: rgba(248,81,73,.14); border: 1px solid rgba(248,81,73,.45); }
+.ds-tx b { font-weight: 800; }

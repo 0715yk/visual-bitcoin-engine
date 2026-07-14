@@ -8,6 +8,8 @@ import init, {
   WasmEngine,
   WasmUtxo,
   WasmHeaderMiner,
+  WasmNetwork,
+  WasmDoubleSpend,
   sha256,
   pow_try,
   pow_preimage,
@@ -115,6 +117,8 @@ init()
     setupChainSim();
     setupUtxo();
     setupAnatomy();
+    setupNetwork();
+    setupDoubleSpend();
   })
   .catch((err) => {
     $("engineBadge").classList.add("error");
@@ -1690,4 +1694,362 @@ function renderAnStep(r) {
     v.className = "cmp-verdict bad";
     v.innerHTML = `블록해시 &gt; target — 아직 너무 큼. nonce를 바꿔 다시…`;
   }
+}
+
+// ============================================================
+// 6번 탭: 노드 합의 (P2P) — 여러 노드 · 방송 · 가장 긴 체인
+// ============================================================
+let netEngine = null; // WasmNetwork 핸들
+let netState = null; // 마지막 스냅샷(파싱됨)
+let netBusy = false; // 자동 시연 중 중복 실행 방지
+
+function setupNetwork() {
+  $("netResetBtn").addEventListener("click", () => {
+    if (netBusy) return;
+    netBuild();
+  });
+  $("netScenarioBtn").addEventListener("click", netScenario);
+
+  // 노드별 채굴/방송 버튼(동적 생성)은 위임으로 처리
+  $("netNodes").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-net]");
+    if (!b || !netEngine || netBusy) return;
+    const idx = Number(b.dataset.idx);
+    if (b.dataset.net === "mine") netApply(netEngine.mine_on(idx));
+    else netApply(netEngine.broadcast(idx));
+  });
+
+  netBuild();
+}
+
+// 입력값(노드 수·난이도)으로 네트워크를 새로 만든다.
+function netBuild() {
+  const count = Math.max(2, Math.min(5, Number($("netNodeCount").value) || 3));
+  const diff = Math.max(1, Math.min(5, Number($("netDifficulty").value) || 3));
+  const names = [];
+  for (let i = 0; i < count; i++) names.push("Node " + String.fromCharCode(65 + i));
+  netEngine = new WasmNetwork(JSON.stringify(names), diff);
+  $("netLog").innerHTML = "";
+  netApply(netEngine.snapshot());
+}
+
+function netApply(json) {
+  netState = JSON.parse(json);
+  renderNet();
+  pullNetLogs();
+}
+
+function renderNet() {
+  const wrap = $("netNodes");
+  if (!netState) {
+    wrap.innerHTML = "";
+    return;
+  }
+  const nodes = netState.nodes;
+
+  // 높이(height)별로 어떤 해시들이 있는지 모아 "합의 vs 포크"를 판정한다.
+  // 그 높이에 해시가 딱 1종류면 모두 동의(agreed), 2종류 이상이면 포크(fork).
+  const byHeight = new Map();
+  let longest = 0;
+  nodes.forEach((n) => {
+    longest = Math.max(longest, n.blocks.length);
+    n.blocks.forEach((b, h) => {
+      if (!byHeight.has(h)) byHeight.set(h, new Set());
+      byHeight.get(h).add(b.hash);
+    });
+  });
+
+  wrap.innerHTML = nodes
+    .map((n, idx) => {
+      const isLongest = n.blocks.length === longest && longest > 1;
+      const blocks = n.blocks
+        .map((b, h) => {
+          const agreed = byHeight.get(h).size === 1;
+          const isTip = h === n.blocks.length - 1;
+          let cls = b.isGenesis ? "nb-genesis" : agreed ? "nb-agreed" : "nb-fork";
+          if (isTip && !b.isGenesis) cls += " nb-tip";
+          const label = b.isGenesis ? "제네시스" : `#${b.id}`;
+          const miner = b.isGenesis ? "" : `<span class="nb-miner">⛏ ${esc(b.miner)}</span>`;
+          const tip = new Set(byHeight.get(h)).size > 1 && !b.isGenesis;
+          return `<div class="net-block ${cls}" title="hash: ${esc(b.hash)}&#10;prev: ${esc(
+            b.prevHash
+          )}&#10;nonce: ${b.nonce}">
+            <span class="nb-id">${label}${tip ? ' <span class="nb-forktag">포크</span>' : ""}</span>
+            ${miner}
+            <span class="nb-hash mono">${esc(b.hash.slice(0, 12))}…${copyBtn(b.hash)}</span>
+          </div>`;
+        })
+        .join('<span class="net-link">→</span>');
+
+      return `<div class="net-node ${isLongest ? "is-longest" : ""}">
+        <div class="net-node-head">
+          <span class="net-node-name">${esc(n.name)}</span>
+          <span class="net-node-height">높이 ${n.height}${isLongest ? " · 👑 최장" : ""}</span>
+          <span class="net-node-actions">
+            <button class="btn sm" data-net="mine" data-idx="${idx}">⛏ 채굴</button>
+            <button class="btn sm green" data-net="bcast" data-idx="${idx}">📡 방송</button>
+          </span>
+        </div>
+        <div class="net-chain-scroll"><div class="net-chain">${blocks}</div></div>
+      </div>`;
+    })
+    .join("");
+}
+
+function pullNetLogs() {
+  if (!netEngine) return;
+  let logs;
+  try {
+    logs = JSON.parse(netEngine.take_logs());
+  } catch {
+    return;
+  }
+  const box = $("netLog");
+  logs.forEach((line) => {
+    const div = document.createElement("div");
+    div.className = "net-log-line " + netLogClass(line);
+    div.textContent = line;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function netLogClass(line) {
+  if (line.includes("재구성") || line.includes("orphan")) return "lg-reorg";
+  if (line.includes("방송")) return "lg-cast";
+  if (line.includes("채굴")) return "lg-mine";
+  if (line.includes("포크")) return "lg-fork";
+  if (line.includes("거부") || line.includes("무효")) return "lg-bad";
+  return "";
+}
+
+// 포크 → 재구성(reorg)이 일어나는 전형적 시나리오를 자동으로 시연.
+async function netScenario() {
+  if (!netEngine || netBusy) return;
+  netBusy = true;
+  const btn = $("netScenarioBtn");
+  const reset = $("netResetBtn");
+  btn.disabled = true;
+  reset.disabled = true;
+
+  // 깨끗한 시작: 3노드로 초기화
+  $("netNodeCount").value = 3;
+  netBuild();
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const steps = [
+    () => netEngine.mine_on(0), // A가 #1 채굴
+    () => netEngine.broadcast(0), // A가 방송 → B·C 동기화
+    () => netEngine.mine_on(1), // B가 #2 채굴 (자기만 앎)
+    () => netEngine.mine_on(0), // A도 #2 채굴 → 포크! (A#2 vs B#2)
+    () => netEngine.broadcast(1), // B가 방송 → A는 동률이라 유지, C는 B를 따라감
+    () => netEngine.mine_on(0), // A가 #3 채굴 → A가 더 길어짐
+    () => netEngine.broadcast(0), // A가 방송 → B·C가 A로 재구성(reorg), B의 블록 버려짐
+  ];
+
+  for (const step of steps) {
+    await sleep(1100);
+    netApply(step());
+  }
+
+  btn.disabled = false;
+  reset.disabled = false;
+  netBusy = false;
+}
+
+// ============================================================
+// 7번 탭: 이중지불 공격 — 공개 체인 vs 공격자 비밀 체인
+// ============================================================
+let dsEngine = null;
+let dsState = null;
+let dsBusy = false;
+
+const clampNum = (v, min, max, def) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : def;
+};
+
+function setupDoubleSpend() {
+  $("dsResetBtn").addEventListener("click", () => {
+    if (dsBusy) return;
+    dsBuild();
+  });
+  $("dsScenarioBtn").addEventListener("click", dsScenario);
+
+  const act = (fn) => () => {
+    if (!dsEngine || dsBusy) return;
+    dsApply(fn());
+  };
+  $("dsPayBtn").addEventListener("click", act(() => dsEngine.start_payment()));
+  $("dsHonestBtn").addEventListener("click", act(() => dsEngine.honest_mine()));
+  $("dsAttackBtn").addEventListener("click", act(() => dsEngine.attacker_mine()));
+  $("dsRevealBtn").addEventListener("click", act(() => dsEngine.reveal()));
+
+  dsBuild();
+}
+
+function dsBuild() {
+  const diff = clampNum($("dsDifficulty").value, 1, 5, 3);
+  const conf = clampNum($("dsConf").value, 1, 6, 1);
+  dsEngine = new WasmDoubleSpend(diff, conf);
+  $("dsLog").innerHTML = "";
+  dsApply(dsEngine.snapshot());
+}
+
+function dsApply(json) {
+  dsState = JSON.parse(json);
+  renderDs();
+  pullDsLogs();
+}
+
+function dsBlockHTML(b, shared, lane) {
+  const label = b.isGenesis ? "제네시스" : `#${b.id}`;
+  const txsHtml = b.txs
+    .map((t) => {
+      if (t.isCoinbase)
+        return `<span class="ds-tx ds-tx-cb">⛏ ${esc(t.to)} +${fmtBtc(t.amount)}</span>`;
+      const isPay = t.from === "Attacker" && t.to === "Merchant";
+      const isFraud = t.from === "Attacker" && t.to === "Attacker";
+      const cls = isPay ? "ds-tx-pay" : isFraud ? "ds-tx-fraud" : "ds-tx-normal";
+      const tag = isPay ? "결제" : isFraud ? "이중지불" : "";
+      return `<span class="ds-tx ${cls}">${tag ? `<b>${tag}</b> ` : ""}${esc(t.from)}→${esc(
+        t.to
+      )} ${fmtBtc(t.amount)}</span>`;
+    })
+    .join("");
+  let cls = b.isGenesis ? "nb-genesis" : shared ? "nb-agreed" : lane === "pub" ? "ds-pub" : "ds-atk";
+  return `<div class="net-block ds-block ${cls}" title="hash: ${esc(b.hash)}&#10;nonce: ${b.nonce}">
+    <span class="nb-id">${label}</span>
+    <div class="ds-txs">${txsHtml}</div>
+  </div>`;
+}
+
+function renderDs() {
+  if (!dsState) return;
+  const s = dsState;
+  const fork = s.forkLen;
+
+  $("dsPublicChain").innerHTML = s.publicChain
+    .map((b, i) => dsBlockHTML(b, i < fork, "pub"))
+    .join('<span class="net-link">→</span>');
+
+  const atkWrap = $("dsAttackerChain");
+  if (!s.started) {
+    atkWrap.innerHTML = `<div class="ds-empty">아직 공격 시작 전 — <b>① 결제 방송</b>을 누르면 공격자가 결제 직전에서 몰래 다른 체인을 파기 시작합니다.</div>`;
+  } else {
+    atkWrap.innerHTML = s.attackerChain
+      .map((b, i) => dsBlockHTML(b, i < fork, "atk"))
+      .join('<span class="net-link">→</span>');
+  }
+
+  $("dsAttackerSub").textContent = s.revealed
+    ? s.attackWon
+      ? "공개됨 · 네트워크가 채택함(reorg)"
+      : "공개됨 · 너무 짧아 무시됨"
+    : "공개 전까지 아무도 모름";
+  $("dsAttackerLane").classList.toggle("revealed", s.revealed && s.attackWon);
+
+  renderDsStatus(s);
+
+  const lock = s.revealed;
+  $("dsPayBtn").disabled = s.started || lock;
+  $("dsHonestBtn").disabled = !s.started || lock;
+  $("dsAttackBtn").disabled = !s.started || lock;
+  $("dsRevealBtn").disabled = !s.started || lock;
+}
+
+function renderDsStatus(s) {
+  const pubLen = s.publicChain.length - 1;
+  const atkLen = s.started ? s.attackerChain.length - 1 : 0;
+  const shipped = s.shipped;
+
+  let verdict = "";
+  if (s.revealed) {
+    if (s.attackWon) {
+      verdict = shipped
+        ? `<div class="ds-verdict bad">😈 공격 성공! 상점은 물건을 배송했는데 결제가 사라졌습니다. 공격자는 물건 + 코인을 모두 챙김.</div>`
+        : `<div class="ds-verdict warn">결제는 되돌려졌지만, 상점이 아직 배송 전이라 실질 피해는 없습니다.</div>`;
+    } else {
+      verdict = `<div class="ds-verdict good">✅ 공격 실패! 정직한 체인이 더 길어 결제가 그대로 확정됩니다.</div>`;
+    }
+  }
+
+  const raceTag = s.started && atkLen > pubLen ? ' <span class="ds-race">⚠️ 공격자 우세</span>' : "";
+  $("dsStatus").innerHTML = `
+    <div class="ds-stat">
+      <span class="ds-stat-k">상점 잔액</span>
+      <span class="ds-stat-v ${s.merchantBalance > 0 ? "good" : "bad"}">${fmtBtc(s.merchantBalance)} BTC</span>
+    </div>
+    <div class="ds-stat">
+      <span class="ds-stat-k">결제 컨펌</span>
+      <span class="ds-stat-v">${s.started ? s.confirmations : 0} / ${s.requiredConf}</span>
+    </div>
+    <div class="ds-stat">
+      <span class="ds-stat-k">상점 배송</span>
+      <span class="ds-stat-v ${shipped ? "bad" : ""}">${shipped ? "📦 배송함 (되돌릴 수 없음)" : "대기 중"}</span>
+    </div>
+    <div class="ds-stat">
+      <span class="ds-stat-k">체인 길이 · 공개 vs 공격자</span>
+      <span class="ds-stat-v">${pubLen} vs ${atkLen}${raceTag}</span>
+    </div>
+    ${verdict}`;
+}
+
+function pullDsLogs() {
+  if (!dsEngine) return;
+  let logs;
+  try {
+    logs = JSON.parse(dsEngine.take_logs());
+  } catch {
+    return;
+  }
+  const box = $("dsLog");
+  logs.forEach((line) => {
+    const div = document.createElement("div");
+    div.className = "net-log-line " + dsLogClass(line);
+    div.textContent = line;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function dsLogClass(line) {
+  if (line.includes("공격 성공") || line.includes("재구성")) return "lg-reorg";
+  if (line.includes("공격 실패")) return "lg-good";
+  if (line.includes("공격자")) return "lg-fork";
+  if (line.includes("상점") || line.includes("① 결제")) return "lg-cast";
+  if (line.includes("무시") || line.includes("안내")) return "lg-bad";
+  return "";
+}
+
+// 공격이 성공하는 전형적 흐름을 자동으로 재생.
+async function dsScenario() {
+  if (!dsEngine || dsBusy) return;
+  dsBusy = true;
+  const btn = $("dsScenarioBtn");
+  const reset = $("dsResetBtn");
+  btn.disabled = true;
+  reset.disabled = true;
+
+  // 극적인 성공을 위해 컨펌 1개로 초기화(상점이 성급하게 배송).
+  $("dsConf").value = 1;
+  dsBuild();
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const steps = [
+    () => dsEngine.start_payment(), // 결제 공개 체인에 담김 → 컨펌1 → 상점 배송 📦
+    () => dsEngine.honest_mine(), // 정직한 네트워크가 한 칸 더
+    () => dsEngine.attacker_mine(), // 공격자 비밀 채굴(이중지불 tx)
+    () => dsEngine.attacker_mine(), // 공격자 추격
+    () => dsEngine.attacker_mine(), // 공격자가 더 길어짐
+    () => dsEngine.reveal(), // 공개 → reorg → 결제 증발 → 공격 성공
+  ];
+  for (const step of steps) {
+    await sleep(1200);
+    dsApply(step());
+  }
+
+  btn.disabled = false;
+  reset.disabled = false;
+  dsBusy = false;
 }

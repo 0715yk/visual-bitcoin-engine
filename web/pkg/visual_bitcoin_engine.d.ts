@@ -1,6 +1,18 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export class WasmDoubleSpend {
+    free(): void;
+    [Symbol.dispose](): void;
+    attacker_mine(): string;
+    honest_mine(): string;
+    constructor(difficulty: number, required_conf: number);
+    reveal(): string;
+    snapshot(): string;
+    start_payment(): string;
+    take_logs(): string;
+}
+
 export class WasmEngine {
     free(): void;
     [Symbol.dispose](): void;
@@ -22,6 +34,16 @@ export class WasmHeaderMiner {
     info(): string;
     constructor(prev_hash_hex: string, txs_json: string, zero_bits: number);
     step(batch: number): string;
+}
+
+export class WasmNetwork {
+    free(): void;
+    [Symbol.dispose](): void;
+    broadcast(from: number): string;
+    mine_on(idx: number): string;
+    constructor(names_json: string, difficulty: number);
+    snapshot(): string;
+    take_logs(): string;
 }
 
 export class WasmUtxo {
@@ -51,14 +73,23 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly __wbg_wasmdoublespend_free: (a: number, b: number) => void;
     readonly __wbg_wasmengine_free: (a: number, b: number) => void;
     readonly __wbg_wasmheaderminer_free: (a: number, b: number) => void;
+    readonly __wbg_wasmnetwork_free: (a: number, b: number) => void;
     readonly __wbg_wasmutxo_free: (a: number, b: number) => void;
     readonly dsha256_steps: (a: number, b: number) => [number, number];
     readonly merkle_tree: (a: number, b: number) => [number, number];
     readonly pow_preimage: (a: number, b: number, c: bigint) => [number, number];
     readonly pow_try: (a: number, b: number, c: number, d: bigint, e: bigint) => [number, number];
     readonly sha256: (a: number, b: number) => [number, number];
+    readonly wasmdoublespend_attacker_mine: (a: number) => [number, number];
+    readonly wasmdoublespend_honest_mine: (a: number) => [number, number];
+    readonly wasmdoublespend_new: (a: number, b: number) => number;
+    readonly wasmdoublespend_reveal: (a: number) => [number, number];
+    readonly wasmdoublespend_snapshot: (a: number) => [number, number];
+    readonly wasmdoublespend_start_payment: (a: number) => [number, number];
+    readonly wasmdoublespend_take_logs: (a: number) => [number, number];
     readonly wasmengine_add_transaction: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmengine_begin_mine: (a: number, b: number, c: number) => [number, number];
     readonly wasmengine_is_mining: (a: number) => number;
@@ -72,6 +103,11 @@ export interface InitOutput {
     readonly wasmheaderminer_info: (a: number) => [number, number];
     readonly wasmheaderminer_new: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmheaderminer_step: (a: number, b: number) => [number, number];
+    readonly wasmnetwork_broadcast: (a: number, b: number) => [number, number];
+    readonly wasmnetwork_mine_on: (a: number, b: number) => [number, number];
+    readonly wasmnetwork_new: (a: number, b: number, c: number) => number;
+    readonly wasmnetwork_snapshot: (a: number) => [number, number];
+    readonly wasmnetwork_take_logs: (a: number) => [number, number];
     readonly wasmutxo_forge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
     readonly wasmutxo_fund: (a: number, b: number, c: number, d: number) => [number, number];
     readonly wasmutxo_new: () => number;

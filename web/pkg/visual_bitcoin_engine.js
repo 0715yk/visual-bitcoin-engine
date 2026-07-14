@@ -2,6 +2,120 @@
 import { web_panic_log } from './snippets/visual-bitcoin-engine-3c75fef77fc2e6a6/inline0.js';
 
 
+export class WasmDoubleSpend {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmDoubleSpendFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmdoublespend_free(ptr, 0);
+    }
+    /**
+     * @returns {string}
+     */
+    attacker_mine() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_attacker_mine(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    honest_mine() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_honest_mine(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {number} difficulty
+     * @param {number} required_conf
+     */
+    constructor(difficulty, required_conf) {
+        const ret = wasm.wasmdoublespend_new(difficulty, required_conf);
+        this.__wbg_ptr = ret;
+        WasmDoubleSpendFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {string}
+     */
+    reveal() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_reveal(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    start_payment() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_start_payment(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    take_logs() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmdoublespend_take_logs(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+}
+if (Symbol.dispose) WasmDoubleSpend.prototype[Symbol.dispose] = WasmDoubleSpend.prototype.free;
+
 export class WasmEngine {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -215,6 +329,94 @@ export class WasmHeaderMiner {
     }
 }
 if (Symbol.dispose) WasmHeaderMiner.prototype[Symbol.dispose] = WasmHeaderMiner.prototype.free;
+
+export class WasmNetwork {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmNetworkFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmnetwork_free(ptr, 0);
+    }
+    /**
+     * @param {number} from
+     * @returns {string}
+     */
+    broadcast(from) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmnetwork_broadcast(this.__wbg_ptr, from);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {number} idx
+     * @returns {string}
+     */
+    mine_on(idx) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmnetwork_mine_on(this.__wbg_ptr, idx);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {string} names_json
+     * @param {number} difficulty
+     */
+    constructor(names_json, difficulty) {
+        const ptr0 = passStringToWasm0(names_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmnetwork_new(ptr0, len0, difficulty);
+        this.__wbg_ptr = ret;
+        WasmNetworkFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {string}
+     */
+    snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmnetwork_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    take_logs() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmnetwork_take_logs(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+}
+if (Symbol.dispose) WasmNetwork.prototype[Symbol.dispose] = WasmNetwork.prototype.free;
 
 export class WasmUtxo {
     __destroy_into_raw() {
@@ -556,12 +758,18 @@ function __wbg_get_imports() {
     };
 }
 
+const WasmDoubleSpendFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmdoublespend_free(ptr, 1));
 const WasmEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmengine_free(ptr, 1));
 const WasmHeaderMinerFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmheaderminer_free(ptr, 1));
+const WasmNetworkFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmnetwork_free(ptr, 1));
 const WasmUtxoFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmutxo_free(ptr, 1));

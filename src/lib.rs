@@ -10,11 +10,13 @@
 //
 // 즉, "진짜 Rust 엔진"이 그대로 브라우저 안에서 돌아간다.
 
+pub mod attack;
 pub mod block;
 pub mod blockchain;
 pub mod config;
 pub mod header;
 pub mod merkle;
+pub mod network;
 pub mod time;
 pub mod transaction;
 pub mod utxo;
