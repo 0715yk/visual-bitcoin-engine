@@ -57,6 +57,10 @@ export class WasmUtxo {
     take_logs(): string;
 }
 
+export function dbl_spend_probability(q_percent: number, z: number): number;
+
+export function dbl_spend_simulate(q_percent: number, z: number, trials: number): number;
+
 export function dsha256_steps(input: string): string;
 
 export function merkle_tree(txs_json: string): string;
@@ -114,6 +118,8 @@ export interface InitOutput {
     readonly wasmutxo_send: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly wasmutxo_snapshot: (a: number) => [number, number];
     readonly wasmutxo_take_logs: (a: number) => [number, number];
+    readonly dbl_spend_probability: (a: number, b: number) => number;
+    readonly dbl_spend_simulate: (a: number, b: number, c: number) => number;
     readonly start: () => void;
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;

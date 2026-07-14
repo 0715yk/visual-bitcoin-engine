@@ -15,6 +15,8 @@ import init, {
   pow_preimage,
   merkle_tree,
   dsha256_steps,
+  dbl_spend_probability,
+  dbl_spend_simulate,
 } from "./pkg/visual_bitcoin_engine.js";
 
 // ---------- 작은 도우미들 ----------
@@ -1886,6 +1888,89 @@ function setupDoubleSpend() {
   $("dsRevealBtn").addEventListener("click", act(() => dsEngine.reveal()));
 
   dsBuild();
+  setupDsCalc();
+}
+
+// ---- 51% 공격 성공 확률 계산기 ----
+function setupDsCalc() {
+  const hash = $("dsHash");
+  const z = $("dsCalcZ");
+  const trials = $("dsTrials");
+  const render = () => renderDsCalc();
+  hash.addEventListener("input", () => {
+    $("dsHashVal").textContent = `${hash.value}%`;
+    render();
+  });
+  z.addEventListener("input", render);
+  trials.addEventListener("change", render);
+  $("dsHashVal").textContent = `${hash.value}%`;
+  renderDsCalc();
+}
+
+// 확률(0~1) → 사람이 읽는 퍼센트 문자열
+function fmtPct(pFrac) {
+  const pct = pFrac * 100;
+  if (pct >= 10) return pct.toFixed(1) + "%";
+  if (pct >= 1) return pct.toFixed(2) + "%";
+  if (pct >= 0.001) return pct.toFixed(4) + "%";
+  if (pct <= 0) return "0%";
+  return pct.toExponential(2) + "%";
+}
+
+function renderDsCalc() {
+  const q = clampNum($("dsHash").value, 1, 99, 30);
+  const z = clampNum($("dsCalcZ").value, 1, 50, 6);
+  const trials = Number($("dsTrials").value) || 10000;
+
+  const theo = dbl_spend_probability(q, z);
+  const exp = dbl_spend_simulate(q, z, trials);
+
+  $("dsCalcOut").innerHTML = `
+    <div class="ds-stat">
+      <span class="ds-stat-k">이론 성공 확률 (백서 공식)</span>
+      <span class="ds-stat-v ${theo > 0.01 ? "bad" : "good"}">${fmtPct(theo)}</span>
+    </div>
+    <div class="ds-stat">
+      <span class="ds-stat-k">실험 성공률 (${fmtInt(trials)}회 몬테카를로)</span>
+      <span class="ds-stat-v ${exp > 0.01 ? "bad" : "good"}">${fmtPct(exp)}</span>
+    </div>
+    <div class="ds-stat">
+      <span class="ds-stat-k">공격자 vs 정직한</span>
+      <span class="ds-stat-v">${q}% : ${100 - q}%</span>
+    </div>`;
+
+  // 해석 배너
+  let verdict;
+  if (q >= 50) {
+    verdict = `<div class="ds-verdict warn">공격자가 <b>과반(${q}%)</b> → 이론상 <b>언젠가는</b> 성공(확률 100%). 하지만 뒤집으려는 블록이 깊을수록 필요한 <b>시간·전기가 폭발</b>합니다. 제네시스(약 90만 컨펌)는 물리적으로 불가능.</div>`;
+  } else if (theo < 0.0001) {
+    verdict = `<div class="ds-verdict good">공격자가 <b>${q}%</b>뿐이라, ${z}컨펌이면 성공 확률이 <b>${fmtPct(
+      theo
+    )}</b> — 사실상 불가능합니다. 컨펌이 깊어질수록 확률은 지수적으로 0에 수렴해요.</div>`;
+  } else {
+    verdict = `<div class="ds-verdict warn">공격자가 <b>${q}%</b>일 때 ${z}컨펌 결제의 성공 확률은 <b>${fmtPct(
+      theo
+    )}</b>. 컨펌을 더 기다릴수록 이 확률은 급격히 떨어집니다.</div>`;
+  }
+  $("dsCalcVerdict").innerHTML = verdict;
+
+  // 깊이(컨펌)별 감소 막대그래프 — 지수 감소를 눈으로
+  const depths = [1, 2, 3, 4, 6, 10, 20];
+  const rows = depths
+    .map((d) => {
+      const pr = dbl_spend_probability(q, d);
+      const pct = pr * 100;
+      const w = Math.max(pr <= 0 ? 0 : 1.5, pct); // 최소 폭으로 존재감 유지
+      return `<div class="ds-decay-row">
+        <span class="ds-decay-z">${d}컨펌</span>
+        <span class="ds-decay-bar"><span class="ds-decay-fill ${
+          pr > 0.01 ? "hi" : "lo"
+        }" style="width:${Math.min(100, w)}%"></span></span>
+        <span class="ds-decay-val">${fmtPct(pr)}</span>
+      </div>`;
+    })
+    .join("");
+  $("dsDecay").innerHTML = rows;
 }
 
 function dsBuild() {
@@ -1902,18 +1987,23 @@ function dsApply(json) {
   pullDsLogs();
 }
 
+const dsName = (n) =>
+  ({ Attacker: "공격자", Merchant: "판매자", Honest: "정직한채굴자" }[n] || n);
+
 function dsBlockHTML(b, shared, lane) {
   const label = b.isGenesis ? "제네시스" : `#${b.id}`;
   const txsHtml = b.txs
     .map((t) => {
       if (t.isCoinbase)
-        return `<span class="ds-tx ds-tx-cb">⛏ ${esc(t.to)} +${fmtBtc(t.amount)}</span>`;
+        return `<span class="ds-tx ds-tx-cb">⛏ 채굴보상 → ${esc(dsName(t.to))} +${fmtBtc(
+          t.amount
+        )}</span>`;
       const isPay = t.from === "Attacker" && t.to === "Merchant";
       const isFraud = t.from === "Attacker" && t.to === "Attacker";
       const cls = isPay ? "ds-tx-pay" : isFraud ? "ds-tx-fraud" : "ds-tx-normal";
-      const tag = isPay ? "결제" : isFraud ? "이중지불" : "";
-      return `<span class="ds-tx ${cls}">${tag ? `<b>${tag}</b> ` : ""}${esc(t.from)}→${esc(
-        t.to
+      const tag = isPay ? "노트북 결제" : isFraud ? "이중지불(자기에게)" : "";
+      return `<span class="ds-tx ${cls}">${tag ? `<b>${tag}</b> ` : ""}${esc(dsName(t.from))}→${esc(
+        dsName(t.to)
       )} ${fmtBtc(t.amount)}</span>`;
     })
     .join("");
@@ -1935,7 +2025,7 @@ function renderDs() {
 
   const atkWrap = $("dsAttackerChain");
   if (!s.started) {
-    atkWrap.innerHTML = `<div class="ds-empty">아직 공격 시작 전 — <b>① 결제 방송</b>을 누르면 공격자가 결제 직전에서 몰래 다른 체인을 파기 시작합니다.</div>`;
+    atkWrap.innerHTML = `<div class="ds-empty">아직 공격 시작 전 — <b>① 노트북 결제</b>를 누르면 공격자가 결제 직전에서 몰래 다른 체인을 파기 시작합니다.</div>`;
   } else {
     atkWrap.innerHTML = s.attackerChain
       .map((b, i) => dsBlockHTML(b, i < fork, "atk"))
@@ -1967,8 +2057,8 @@ function renderDsStatus(s) {
   if (s.revealed) {
     if (s.attackWon) {
       verdict = shipped
-        ? `<div class="ds-verdict bad">😈 공격 성공! 상점은 물건을 배송했는데 결제가 사라졌습니다. 공격자는 물건 + 코인을 모두 챙김.</div>`
-        : `<div class="ds-verdict warn">결제는 되돌려졌지만, 상점이 아직 배송 전이라 실질 피해는 없습니다.</div>`;
+        ? `<div class="ds-verdict bad">😈 공격 성공! 판매자는 노트북을 이미 발송했는데 결제가 사라졌습니다. 공격자는 노트북 + 코인을 모두 챙김.</div>`
+        : `<div class="ds-verdict warn">결제는 되돌려졌지만, 판매자가 아직 발송 전이라 실질 피해는 없습니다.</div>`;
     } else {
       verdict = `<div class="ds-verdict good">✅ 공격 실패! 정직한 체인이 더 길어 결제가 그대로 확정됩니다.</div>`;
     }
@@ -1977,16 +2067,16 @@ function renderDsStatus(s) {
   const raceTag = s.started && atkLen > pubLen ? ' <span class="ds-race">⚠️ 공격자 우세</span>' : "";
   $("dsStatus").innerHTML = `
     <div class="ds-stat">
-      <span class="ds-stat-k">상점 잔액</span>
+      <span class="ds-stat-k">판매자가 받은 코인</span>
       <span class="ds-stat-v ${s.merchantBalance > 0 ? "good" : "bad"}">${fmtBtc(s.merchantBalance)} BTC</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">결제 컨펌</span>
+      <span class="ds-stat-k">결제 확인(컨펌)</span>
       <span class="ds-stat-v">${s.started ? s.confirmations : 0} / ${s.requiredConf}</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">상점 배송</span>
-      <span class="ds-stat-v ${shipped ? "bad" : ""}">${shipped ? "📦 배송함 (되돌릴 수 없음)" : "대기 중"}</span>
+      <span class="ds-stat-k">노트북 발송</span>
+      <span class="ds-stat-v ${shipped ? "bad" : ""}">${shipped ? "📦 발송함 (되돌릴 수 없음)" : "대기 중"}</span>
     </div>
     <div class="ds-stat">
       <span class="ds-stat-k">체인 길이 · 공개 vs 공격자</span>
@@ -2017,7 +2107,7 @@ function dsLogClass(line) {
   if (line.includes("공격 성공") || line.includes("재구성")) return "lg-reorg";
   if (line.includes("공격 실패")) return "lg-good";
   if (line.includes("공격자")) return "lg-fork";
-  if (line.includes("상점") || line.includes("① 결제")) return "lg-cast";
+  if (line.includes("판매자") || line.includes("결제")) return "lg-cast";
   if (line.includes("무시") || line.includes("안내")) return "lg-bad";
   return "";
 }

@@ -990,3 +990,48 @@ button.btn.sm.green { background: linear-gradient(145deg, #3fb950, #2ea043); bor
 .ds-tx-pay { color: #6ee787; background: rgba(63,185,80,.14); border: 1px solid rgba(63,185,80,.4); }
 .ds-tx-fraud { color: #ff8983; background: rgba(248,81,73,.14); border: 1px solid rgba(248,81,73,.45); }
 .ds-tx b { font-weight: 800; }
+
+/* 이중지불 쉬운 설명 스토리 박스 */
+.ds-story { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg-soft); margin-top: 4px; }
+.ds-story-h { font-weight: 800; font-size: 14px; color: var(--btc-soft); margin-bottom: 8px; }
+.ds-story-list { margin: 0; padding-left: 22px; }
+.ds-story-list li { margin: 7px 0; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+.ds-story-list li b { color: var(--text); }
+.ds-story-list .muted { color: var(--muted-2); font-size: 12px; }
+
+/* 컨펌 기다리기 = 리드 벌어지기 데모 */
+.conf-demo { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 10px; }
+.conf-case { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--bg-soft); }
+.conf-case-h { font-weight: 800; font-size: 13.5px; margin-bottom: 10px; }
+.conf-case-h.risky { color: #ff8983; }
+.conf-case-h.safe { color: #6ee787; }
+.conf-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-bottom: 10px; }
+.conf-blk { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 30px; padding: 0 6px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text); }
+.conf-blk.pay { background: rgba(63,185,80,.14); border-color: rgba(63,185,80,.45); color: #6ee787; }
+.conf-arrow { color: var(--muted-2); font-size: 12px; }
+.conf-note { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+.conf-note b { color: var(--text); }
+.conf-note .risky-t { color: #ff8983; }
+.conf-note .safe-t { color: #6ee787; }
+
+/* 공격의 한계 + 계산기 */
+.ds-limit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+.ds-limit-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--bg-soft); }
+.ds-limit-h { font-weight: 800; font-size: 13px; color: var(--btc-soft); margin-bottom: 6px; }
+.ds-limit-b { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+.ds-limit-b b { color: var(--text); }
+
+.ds-calc-out { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.ds-calc-verdict { margin-top: 12px; }
+
+.ds-sub { font-size: 14px; margin: 20px 0 10px; color: var(--text); }
+.ds-decay { display: flex; flex-direction: column; gap: 6px; }
+.ds-decay-row { display: grid; grid-template-columns: 64px 1fr 96px; align-items: center; gap: 10px; }
+.ds-decay-z { font-size: 12px; color: var(--muted); font-family: var(--mono); text-align: right; }
+.ds-decay-bar { height: 16px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.ds-decay-fill { display: block; height: 100%; border-radius: 5px 0 0 5px; transition: width .25s; }
+.ds-decay-fill.hi { background: linear-gradient(90deg, #f85149, #ff8983); }
+.ds-decay-fill.lo { background: linear-gradient(90deg, #2ea043, #3fb950); }
+.ds-decay-val { font-size: 12px; font-family: var(--mono); color: var(--text); }
+
+input[type="range"] { accent-color: var(--btc); width: 100%; }

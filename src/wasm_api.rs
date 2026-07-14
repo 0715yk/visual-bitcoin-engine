@@ -725,3 +725,16 @@ impl WasmDoubleSpend {
         serde_json::to_string(&logs).unwrap_or_else(|_| "[]".to_string())
     }
 }
+
+// 공격자 해시파워 q_percent(%)와 상점 컨펌 수 z에 대한
+// 이론적 이중지불 성공 확률(0~1). (사토시 백서 공식)
+#[wasm_bindgen]
+pub fn dbl_spend_probability(q_percent: f64, z: u32) -> f64 {
+    crate::attack::success_probability(q_percent / 100.0, z)
+}
+
+// 같은 조건을 몬테카를로로 trials번 실험한 성공 비율(0~1).
+#[wasm_bindgen]
+pub fn dbl_spend_simulate(q_percent: f64, z: u32, trials: u32) -> f64 {
+    crate::attack::simulate(q_percent / 100.0, z, trials)
+}

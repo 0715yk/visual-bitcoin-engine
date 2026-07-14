@@ -536,6 +536,27 @@ export class WasmUtxo {
 if (Symbol.dispose) WasmUtxo.prototype[Symbol.dispose] = WasmUtxo.prototype.free;
 
 /**
+ * @param {number} q_percent
+ * @param {number} z
+ * @returns {number}
+ */
+export function dbl_spend_probability(q_percent, z) {
+    const ret = wasm.dbl_spend_probability(q_percent, z);
+    return ret;
+}
+
+/**
+ * @param {number} q_percent
+ * @param {number} z
+ * @param {number} trials
+ * @returns {number}
+ */
+export function dbl_spend_simulate(q_percent, z, trials) {
+    const ret = wasm.dbl_spend_simulate(q_percent, z, trials);
+    return ret;
+}
+
+/**
  * @param {string} input
  * @returns {string}
  */

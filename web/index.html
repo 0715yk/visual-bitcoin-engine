@@ -715,10 +715,103 @@ Coinbase -> Miner : 6.25</textarea>
     <section class="tab-panel" id="tab-attack">
       <div class="card">
         <h2>"가장 긴 체인이 이긴다"를 악용하면 — 이중지불 공격</h2>
-        <p class="lead">공격자는 <b>같은 코인을 두 번</b> 씁니다. 하나는 상점에게 결제로 보내(공개 체인), 상점이 물건을 내주면 — 몰래 파놓은 <b>비밀 체인</b>(결제가 없는 다른 역사)을 공개해 버려요. 비밀 체인이 더 길면 네트워크는 그쪽으로 <b>재구성(reorg)</b>되고, 결제는 <b>없던 일</b>이 됩니다. 상점은 물건도 돈도 잃죠.</p>
-        <div class="callout warn">
-          <b>공격이 성공하려면</b> 공격자가 정직한 네트워크보다 블록을 <b>더 빨리</b> 캐야 해요(= <b>51% 해시파워</b>). 그리고 상점이 <b>컨펌을 많이 기다릴수록</b> 공격자가 그만큼 더 앞서야 하니 성공이 어려워집니다. "왜 6컨펌을 기다리라는가"가 여기서 나와요.
+        <p class="lead">한마디로 <b>"돈 내고 물건 받은 뒤, 그 결제 기록을 몰래 지워버리는"</b> 사기예요. 같은 코인을 <b>두 번</b> 쓰는 거죠.</p>
+
+        <div class="ds-story">
+          <div class="ds-story-h">🛒 쉽게: 중고로 노트북 사기</div>
+          <ol class="ds-story-list">
+            <li><b>공격자</b>가 <b>판매자(상점)</b>에게서 노트북을 사며 비트코인 10개를 보냄 → 이 결제가 블록에 담김</li>
+            <li>판매자는 "입금 확인!" 하고 <b>노트북을 택배로 발송</b> 📦 <span class="muted">(현실에선 되돌릴 수 없음)</span></li>
+            <li>그 사이 공격자는 <b>몰래 다른 버전의 역사</b>를 캐고 있었음 — 그 역사엔 <b>노트북 결제가 아예 없고</b>, 코인을 <b>자기 지갑으로 돌려놓음</b></li>
+            <li>이 비밀 체인이 더 길어지면 공개 → 네트워크가 <b>더 긴 체인</b>으로 갈아탐(재구성/reorg)</li>
+            <li>결과: 노트북 결제는 <b>없던 일</b>이 됨. 공격자는 <b>노트북 + 코인 둘 다</b> 챙기고, 판매자는 <b>둘 다</b> 잃음 😱</li>
+          </ol>
         </div>
+
+        <p class="lead small" style="margin-top:12px">아래 시뮬레이터에서 <b>공개 체인</b>(모두가 아는 진짜 기록)과 <b>공격자의 비밀 체인</b>을 직접 경쟁시켜, 결제가 어떻게 증발하는지 볼 수 있어요.</p>
+
+        <div class="callout warn">
+          <b>공격이 성공하려면</b> 공격자가 정직한 네트워크보다 블록을 <b>더 빨리</b> 캐야 해요(= <b>51% 해시파워</b>). 그리고 판매자가 <b>입금 확인(컨펌)을 오래 기다릴수록</b> 공격자가 그만큼 더 앞서야 해서 성공이 어려워집니다. "왜 입금 6번 확인하고 물건 주라는가"가 바로 이거예요.
+        </div>
+      </div>
+
+      <!-- 왜 컨펌을 기다리면 안전한가 -->
+      <div class="card">
+        <h2>왜 "입금 확인(컨펌)을 기다리면" 안전해질까?</h2>
+        <p class="lead small"><b>컨펌</b> = 내 결제가 담긴 블록 <b>위에 쌓인 블록 수</b>. 판매자가 물건을 보내기 전에 이걸 더 기다릴수록, 공격자가 결제를 뒤집으려고 <b>따라잡아야 할 거리</b>가 멀어져요. 공격자의 비밀 체인이 정직한 체인보다 <b>더 길어져야</b> 뒤집을 수 있는데, 기다리는 동안 <b>정직한 체인이 계속 앞서 나가기</b> 때문이죠.</p>
+
+        <div class="conf-demo">
+          <div class="conf-case">
+            <div class="conf-case-h risky">😮 1컨펌에 바로 발송 (성급)</div>
+            <div class="conf-chain">
+              <span class="conf-blk pay">결제</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">①</span>
+            </div>
+            <div class="conf-note">정직한 체인이 <b>1블록</b>만 앞섬 → 공격자는 <b>2블록</b>만 몰래 만들면 추월. <b class="risky-t">해볼 만함 😈</b></div>
+          </div>
+
+          <div class="conf-case">
+            <div class="conf-case-h safe">🛡️ 6컨펌 기다렸다 발송 (신중)</div>
+            <div class="conf-chain">
+              <span class="conf-blk pay">결제</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">①</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">②</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">③</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">④</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">⑤</span><span class="conf-arrow">→</span>
+              <span class="conf-blk">⑥</span>
+            </div>
+            <div class="conf-note">정직한 체인이 <b>6블록</b>이나 앞섬 → 공격자는 이 격차를 <b>다 따라잡고 + 한 발 더</b> 앞서야 함. <b class="safe-t">훨씬 어려움 🛡️</b></div>
+          </div>
+        </div>
+
+        <div class="callout why" style="margin-top:14px">
+          한마디로: 판매자가 <b>오래 기다릴수록 정직한 체인의 리드가 커지고</b>, 공격자가 뒤집어야 할 격차도 그만큼 벌어져요. 그래서 컨펌이 하나 늘 때마다 성공 확률이 (공격자가 과반 미만이면) <b>지수적으로 뚝뚝</b> 떨어집니다. → <b>소액은 1컨펌, 큰 금액(거래소 입금 등)은 6컨펌 이상</b>을 기다리는 이유예요.
+        </div>
+      </div>
+
+      <!-- 공격의 한계 + 성공 확률 계산기 -->
+      <div class="card">
+        <h2>그래서 51% 공격, 어디까지 가능할까? — 성공 확률 계산기</h2>
+        <p class="lead small">51% 공격에도 <b>한계</b>가 있어요. 결론부터: <b>갓 결제된 최근 몇 블록</b>은 노려볼 수 있어도, <b>깊은 과거(제네시스 근처)는 사실상 절대 불가능</b>합니다. 아래에서 공격자 해시파워와 컨펌 수를 바꿔보면 왜 그런지 숫자로 보여요. (모든 계산은 Rust 엔진이 합니다.)</p>
+
+        <div class="ds-limit-grid">
+          <div class="ds-limit-box">
+            <div class="ds-limit-h">공격자 &lt; 50%</div>
+            <div class="ds-limit-b">컨펌이 쌓일수록 성공 확률이 <b>지수적으로 급락</b>. 6컨펌이면 사실상 0. → 깊은 과거는 불가능.</div>
+          </div>
+          <div class="ds-limit-box">
+            <div class="ds-limit-h">공격자 ≥ 50%</div>
+            <div class="ds-limit-b">이론상 <b>언젠가는</b> 성공(확률 100%). 하지만 깊을수록 필요한 <b>시간·전기가 폭발</b>.</div>
+          </div>
+          <div class="ds-limit-box">
+            <div class="ds-limit-h">제네시스/오래된 블록</div>
+            <div class="ds-limit-b">누적된 일(PoW)이 <b>방패</b> + 제네시스는 <b>하드코딩</b>. → 물리적으로 불가능.</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px; align-items:flex-end; flex-wrap:wrap; gap:16px">
+          <label class="field grow" style="max-width:360px">
+            <span class="lbl-row">공격자 해시파워 <b id="dsHashVal">30%</b></span>
+            <input id="dsHash" type="range" min="1" max="99" value="30" />
+          </label>
+          <label class="field"><span class="lbl-row">판매자 컨펌 수 (깊이 z) <span class="hint" title="결제 위에 몇 블록이 쌓였는지. 클수록 과거로 깊이 들어가 뒤집기 어려움.">?</span></span>
+            <input id="dsCalcZ" type="number" min="1" max="50" value="6" style="width:110px" />
+          </label>
+          <label class="field"><span class="lbl-row">실험 횟수</span>
+            <select id="dsTrials" style="width:130px">
+              <option value="2000">2,000회</option>
+              <option value="10000" selected>10,000회</option>
+              <option value="50000">50,000회</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="ds-calc-out" id="dsCalcOut"></div>
+        <div class="ds-calc-verdict" id="dsCalcVerdict"></div>
+
+        <h3 class="ds-sub">컨펌 깊이에 따른 성공 확률 (이 해시파워 기준)</h3>
+        <div class="ds-decay" id="dsDecay"></div>
       </div>
 
       <div class="card">
@@ -726,7 +819,7 @@ Coinbase -> Miner : 6.25</textarea>
           <label class="field"><span class="lbl-row">난이도(선행 0)</span>
             <input id="dsDifficulty" type="number" min="1" max="5" value="3" style="width:90px" />
           </label>
-          <label class="field"><span class="lbl-row">상점 요구 컨펌 <span class="hint" title="상점이 결제 후 몇 개의 블록이 쌓이길 기다렸다 물건을 내주는지. 크면 공격이 어려워집니다.">?</span></span>
+          <label class="field"><span class="lbl-row">판매자 요구 컨펌 <span class="hint" title="판매자가 결제 후 몇 개의 블록이 쌓이길 기다렸다 노트북을 보내는지. 크면 공격이 어려워집니다.">?</span></span>
             <input id="dsConf" type="number" min="1" max="6" value="1" style="width:90px" />
           </label>
           <button class="btn primary" id="dsResetBtn">초기화</button>
@@ -734,7 +827,7 @@ Coinbase -> Miner : 6.25</textarea>
         </div>
 
         <div class="ds-actions">
-          <button class="btn" id="dsPayBtn">① 결제 방송 (공격자→상점 10 BTC)</button>
+          <button class="btn" id="dsPayBtn">① 노트북 결제 (공격자→판매자 10 BTC)</button>
           <button class="btn" id="dsHonestBtn">정직한 채굴 ⛏</button>
           <button class="btn" id="dsAttackBtn">공격자 몰래 채굴 😈</button>
           <button class="btn danger" id="dsRevealBtn">💥 비밀 체인 공개 (reveal)</button>

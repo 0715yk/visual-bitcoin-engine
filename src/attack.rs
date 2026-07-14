@@ -72,7 +72,7 @@ impl DoubleSpend {
             logs: Vec::new(),
         };
         ds.log(format!(
-            "[준비] 제네시스 생성. 상점은 결제 후 컨펌 {}개를 기다렸다 물건을 배송합니다.",
+            "[준비] 제네시스 생성. 판매자는 결제 후 컨펌 {}개를 기다렸다 노트북을 발송합니다.",
             ds.required_conf
         ));
         ds
@@ -116,7 +116,7 @@ impl DoubleSpend {
 
         self.started = true;
         self.log(format!(
-            "[① 결제] 공격자 → 상점 {AMOUNT} BTC 거래가 공개 체인 블록 #{id}에 담김 (컨펌 1개)."
+            "[① 결제] 공격자 → 판매자 {AMOUNT} BTC(노트북값) 거래가 공개 체인 블록 #{id}에 담김 (컨펌 1개)."
         ));
         self.log("[공격 준비] 공격자는 '결제 직전' 지점에서 몰래 다른 체인을 파기 시작합니다 😈".into());
         self.check_shipping();
@@ -203,11 +203,11 @@ impl DoubleSpend {
                 self.attacker_chain.len() - 1,
                 self.public_chain.len() - 1
             ));
-            self.log("[재구성] 공개 체인의 '공격자 → 상점' 결제가 사라지고, '공격자 → 공격자'로 대체됨 ⚠️".into());
+            self.log("[재구성] 공개 체인의 '공격자 → 판매자' 결제가 사라지고, '공격자 → 공격자'로 대체됨 ⚠️".into());
             if self.shipped {
-                self.log("[결과] 😈 공격 성공! 상점은 이미 물건을 배송했는데 돈은 공격자에게 돌아갔습니다.".into());
+                self.log("[결과] 😈 공격 성공! 판매자는 이미 노트북을 발송했는데 돈은 공격자에게 돌아갔습니다.".into());
             } else {
-                self.log("[결과] 결제는 되돌려졌지만, 상점이 아직 물건을 안 줘서 실질 피해는 없습니다.".into());
+                self.log("[결과] 결제는 되돌려졌지만, 판매자가 아직 노트북을 안 보내서 실질 피해는 없습니다.".into());
             }
         } else {
             // 공격자가 못 따라잡음 → 공개 체인 유지. 결제 확정.
@@ -221,12 +221,12 @@ impl DoubleSpend {
         }
     }
 
-    // 상점이 컨펌을 충분히 봐서 물건을 배송하는지 확인.
+    // 판매자가 컨펌을 충분히 봐서 노트북을 발송하는지 확인.
     fn check_shipping(&mut self) {
         if !self.shipped && self.started && self.confirmations() >= self.required_conf {
             self.shipped = true;
             self.log(format!(
-                "[상점 📦] 결제 컨펌 {}개 확인 → 물건 배송 완료! (현실에선 되돌릴 수 없음)",
+                "[판매자 📦] 결제 컨펌 {}개 확인 → 노트북 발송 완료! (현실에선 되돌릴 수 없음)",
                 self.confirmations()
             ));
         }
@@ -290,4 +290,111 @@ impl DoubleSpend {
     pub fn merchant_balance_pub(&self) -> f64 {
         Self::merchant_balance(&self.public_chain)
     }
+}
+
+// ============================================================
+// 51% 공격의 "한계" — 성공 확률 계산 & 몬테카를로 실험
+// ============================================================
+// 핵심 질문: 공격자가 해시파워 q(0~1)를 가졌을 때,
+// 상점이 z컨펌을 기다린 결제를 뒤집을 확률은 얼마인가?
+//
+//  - q < 0.5  : z가 커질수록 성공 확률이 "지수적으로" 0에 수렴한다.
+//               (그래서 깊은 과거·제네시스는 사실상 절대 못 뒤집는다.)
+//  - q >= 0.5 : 이론상 언젠가는 성공(확률 1). 하지만 깊을수록 필요한
+//               시간·전기가 폭발한다. 제네시스(약 90만 컨펌)는 물리적으로 불가능.
+
+// 사토시 백서(11장) 공식.
+// 상점이 z개의 컨펌을 본 시점에서 공격자가 따라잡을 확률.
+pub fn success_probability(q: f64, z: u32) -> f64 {
+    if q <= 0.0 {
+        return 0.0;
+    }
+    if q >= 0.5 {
+        return 1.0; // 과반이면 언젠가는 반드시 따라잡는다.
+    }
+    let p = 1.0 - q;
+    let lambda = z as f64 * (q / p);
+
+    // P = 1 - Σ_{k=0}^{z} [ λ^k·e^-λ / k! ] · ( 1 - (q/p)^(z-k) )
+    let mut sum = 1.0_f64;
+    let mut poisson = (-lambda).exp(); // k=0 항
+    for k in 0..=z {
+        if k > 0 {
+            poisson *= lambda / k as f64; // 포아송 확률질량을 반복적으로 갱신
+        }
+        let factor = 1.0 - (q / p).powi(z as i32 - k as i32);
+        sum -= poisson * factor;
+    }
+    sum.clamp(0.0, 1.0)
+}
+
+// 몬테카를로 실험: 실제 채굴 경쟁을 trials번 돌려 성공 비율을 잰다.
+// (이론 공식이 진짜로 맞는지 "실험"으로 확인하는 용도)
+pub fn simulate(q: f64, z: u32, trials: u32) -> f64 {
+    if q <= 0.0 {
+        return 0.0;
+    }
+    if q >= 1.0 {
+        return 1.0;
+    }
+    let p = 1.0 - q;
+    let ratio = q / p;
+    let mut seed = os_seed();
+    let mut wins = 0u32;
+    let n = trials.max(1);
+
+    for _ in 0..n {
+        // 1단계: 상점이 z컨펌을 볼 때까지(= 정직한 블록 z개) 경쟁.
+        //         그동안 공격자가 몰래 캔 블록 수를 센다.
+        let mut honest = 0u32;
+        let mut attacker = 0u32;
+        while honest < z {
+            if next_f64(&mut seed) < q {
+                attacker += 1;
+            } else {
+                honest += 1;
+            }
+        }
+
+        // 2단계: 남은 부족분(deficit)을 따라잡는지.
+        let deficit = z as i64 - attacker as i64;
+        let won = if deficit <= 0 {
+            true // 이미 동률 이상 → 곧 추월
+        } else if q >= 0.5 {
+            true
+        } else {
+            // 부족분 d를 따라잡을 확률 = (q/p)^d
+            next_f64(&mut seed) < ratio.powi(deficit as i32)
+        };
+        if won {
+            wins += 1;
+        }
+    }
+    wins as f64 / n as f64
+}
+
+// OS/브라우저 난수로 PRNG 시드를 만든다.
+fn os_seed() -> u64 {
+    let mut buf = [0u8; 8];
+    let _ = getrandom::getrandom(&mut buf);
+    let s = u64::from_le_bytes(buf);
+    if s == 0 {
+        0x9E37_79B9_7F4A_7C15
+    } else {
+        s
+    }
+}
+
+// xorshift64 — 빠른 의사난수(몬테카를로용, 암호용 아님).
+fn next_u64(s: &mut u64) -> u64 {
+    let mut x = *s;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *s = x;
+    x
+}
+
+fn next_f64(s: &mut u64) -> f64 {
+    (next_u64(s) >> 11) as f64 / (1u64 << 53) as f64
 }
