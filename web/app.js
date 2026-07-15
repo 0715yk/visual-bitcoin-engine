@@ -18,6 +18,7 @@ import init, {
   dbl_spend_probability,
   dbl_spend_simulate,
 } from "./pkg/visual_bitcoin_engine.js";
+import { initI18n, t, applyI18n, getLang } from "./i18n.js";
 
 // ---------- 작은 도우미들 ----------
 const $ = (id) => document.getElementById(id);
@@ -31,7 +32,11 @@ const fmtBtc = (x) => {
   const n = Number(x);
   return Number.isInteger(n) ? n.toString() : n.toFixed(3).replace(/\.?0+$/, "");
 };
-const fmtInt = (x) => Number(x).toLocaleString("en-US");
+// 현재 UI 언어에 맞는 로캘 (숫자 구분기호·시간 표기에 사용)
+const UI_LOCALE = { ko: "ko-KR", en: "en-US", ja: "ja-JP", es: "es-ES", fr: "fr-FR", de: "de-DE" };
+const uiLocale = () => UI_LOCALE[getLang()] || "en-US";
+const fmtInt = (x) => Number(x).toLocaleString(uiLocale());
+const fmtTime = (unixSecs) => new Date(unixSecs * 1000).toLocaleTimeString(uiLocale());
 
 // 해시 앞쪽의 연속된 0을 강조 표시
 function hlLeadingZeros(hash) {
@@ -43,12 +48,232 @@ function hlLeadingZeros(hash) {
 // 거래 한 건을 Rust의 to_hash_string()과 똑같이 문자열로 (해시 재계산용)
 const txToHashString = (tx) => `${tx.from}->${tx.to}:${rustNum(tx.amount)}`;
 
+// ---------- 엔진(Rust) 로그·에러 번역 ----------
+// WASM 엔진은 로그/에러를 한국어 문장으로 만든다. 원문을 정규식으로 인식해
+// 현재 언어의 log.* 키로 바꿔 그린다. (원문은 저장해 두고 언어 전환 시 다시 번역)
+const ENGINE_LOG_PATTERNS = [
+  // --- 탭 3: 블록체인 시뮬레이터 ---
+  [/^\[INIT\] 제네시스 블록 채굴 중\.\.\.$/, () => t("log.init1")],
+  [/^\[INIT\] 제네시스 블록 생성 완료 \(hash: (.+)\.\.\.\)$/, (m) => t("log.init2", { h: m[1] })],
+  [
+    /^\[난이도 조정\] 최근 (\d+)블록 실제 (\d+)초 \/ 목표 (\d+)초 → (.+) \(난이도 (\d+) → (\d+)\)$/,
+    (m) => {
+      const v =
+        m[4] === "너무 빠르다! 난이도 UP"
+          ? t("log.diffUp")
+          : m[4] === "너무 느리다! 난이도 DOWN"
+          ? t("log.diffDown")
+          : t("log.diffKeep");
+      return t("log.diffAdj", { n: m[1], a: m[2], e: m[3], v, o: m[5], d: m[6] });
+    },
+  ],
+  [/^\[REJECTED\] 거래 거부! 금액은 0보다 커야 합니다\.$/, () => t("log.rejAmt")],
+  [
+    /^\[REJECTED\] 거래 거부! (.+) 잔액 부족 \(보유: (.+) BTC, 시도: (.+) BTC\)$/,
+    (m) => t("log.rejBal", { from: m[1], bal: m[2], amt: m[3] }),
+  ],
+  [/^\[TX\] 거래 승인 → 멤풀 대기: (.+)$/, (m) => t("log.txOk", { tx: m[1] })],
+  [
+    /^\[MINING\] Block #(\d+) 채굴 시작 \(난이도: (\d+), 보상: (.+) BTC, 거래: (\d+)건\)$/,
+    (m) => t("log.mining", { id: m[1], d: m[2], r: m[3], n: m[4] }),
+  ],
+  [
+    /^\[MINED\] Block #(\d+) 확정! nonce=(\d+), hash=(.+)\.\.\.$/,
+    (m) => t("log.mined", { id: m[1], nonce: m[2], h: m[3] }),
+  ],
+  // --- 탭 3: 검증 보고서 reason ---
+  [/^모든 블록의 해시와 연결이 정상입니다\.$/, () => t("log.vOk")],
+  [
+    /^Block #(\d+) 해시 불일치! 누군가 거래 데이터를 조작했다\. \(저장:(.+)\.\.\. \/ 재계산:(.+)\.\.\.\)$/,
+    (m) => t("log.vHash", { id: m[1], a: m[2], b: m[3] }),
+  ],
+  [/^Block #(\d+) 체인 연결 끊김!$/, (m) => t("log.vLink", { id: m[1] })],
+  [
+    /^Block #(\d+) 작업증명 불충족! 해시가 0 (\d+)개로 시작하지 않는다 \(재채굴되지 않은 블록\)\.$/,
+    (m) => t("log.vPow", { id: m[1], d: m[2] }),
+  ],
+  // --- 탭 4: UTXO ---
+  [
+    /^\[지갑\] '(.+)' 키쌍 생성 → 주소 (.+) \(공개키 (.+)…\)$/,
+    (m) => t("log.uWallet", { label: m[1], addr: m[2], pk: m[3] }),
+  ],
+  [
+    /^\[발행\] 코인베이스 → (.+)\((.+)\): (.+) BTC \(새 UTXO (.+):0\)$/,
+    (m) => t("log.uFund", { label: m[1], addr: m[2], amt: m[3], txid: m[4] }),
+  ],
+  [
+    /^\[거래\] (.+) → (.+): (.+) BTC \| 서명 검증 ✅ \| 입력 (\d+)개\(합 (.+)\) 소비, 거스름돈 (.+), 수수료 (.+)$/,
+    (m) => t("log.uTx", { from: m[1], to: m[2], amt: m[3], n: m[4], sum: m[5], chg: m[6], fee: m[7] }),
+  ],
+  [
+    /^\[위조 거부\] (.+)가 (.+)의 동전을 훔치려 함 → ([\s\S]+)$/,
+    (m) => t("log.uForgeRej", { attacker: m[1], victim: m[2], reason: trEngine(m[3]) }),
+  ],
+  [/^\[경고\] 위조 시도가 검증을 통과했습니다\(공격자=피해자\?\)\.$/, () => t("log.uForgeWarn")],
+  // --- 탭 4: 에러 문자열 (SendResult.error / verdict) ---
+  [
+    /^(.+)의 잔액 부족: 모을 수 있는 건 (.+) BTC인데 (.+) BTC가 필요합니다\.$/,
+    (m) => t("log.eVictimBal", { victim: m[1], sum: m[2], need: m[3] }),
+  ],
+  [
+    /^잔액 부족: 모을 수 있는 건 (.+) BTC인데 (.+) BTC가 필요합니다\.$/,
+    (m) => t("log.eNoBal", { sum: m[1], need: m[2] }),
+  ],
+  [/^서명할 입력이 없습니다\.$/, () => t("log.eNoInputs")],
+  [
+    /^서명한 키의 주소\((.+)\)가 UTXO 소유자 주소\((.+)\)와 다릅니다 → 남의 동전입니다\.$/,
+    (m) => t("log.eAddrMismatch", { a: m[1], b: m[2] }),
+  ],
+  [/^서명이 메시지와 맞지 않습니다\(검증 실패\)\.$/, () => t("log.eSigBad")],
+  [/^금액은 0보다 커야 합니다\.$/, () => t("log.eAmt")],
+  [/^수수료는 음수가 될 수 없습니다\.$/, () => t("log.eFee")],
+  [/^이 경우는 사실상 본인 거래입니다\.$/, () => t("log.eSelf")],
+  [/^검증 실패: ([\s\S]+)$/, (m) => t("log.eVerify", { reason: trEngine(m[1]) })],
+  [/^검증 실패$/, () => t("log.eVerifyBare")],
+  // --- 탭 6: P2P 네트워크 ---
+  [
+    /^\[네트워크\] 노드 (\d+)개 생성 · 모두 같은 제네시스\((.+)…\)에서 출발$/,
+    (m) => t("log.nInit", { n: m[1], h: m[2] }),
+  ],
+  [
+    /^\[채굴\] (.+) 가 블록 #(\d+) 생성\(hash (.+)…\) — 아직 자기만 알고 있음\. 방송해야 퍼진다\.$/,
+    (m) => t("log.nMine", { name: m[1], id: m[2], h: m[3] }),
+  ],
+  [/^\[방송\] (.+) 의 체인이 무효 → 이웃들이 거부$/, (m) => t("log.nCastBad", { name: m[1] })],
+  [
+    /^\[방송\] (.+) 가 자기 체인\(길이 (\d+)\)을 이웃들에게 전파 📡$/,
+    (m) => t("log.nCast", { name: m[1], len: m[2] }),
+  ],
+  [/^\[거부\] (.+) : 제네시스가 달라 남의 체인으로 취급$/, (m) => t("log.nRejGen", { name: m[1] })],
+  [
+    /^\[재구성\] (.+) : 더 긴 체인 채택\(길이 (\d+)→(\d+)\) · 내 블록 (\d+)개 버려짐\(orphan\) ⚠️$/,
+    (m) => t("log.nReorg", { name: m[1], a: m[2], b: m[3], n: m[4] }),
+  ],
+  [
+    /^\[동기화\] (.+) : 뒤처진 체인을 따라잡음\(길이 (\d+)→(\d+)\)$/,
+    (m) => t("log.nSync", { name: m[1], a: m[2], b: m[3] }),
+  ],
+  [
+    /^\[포크 유지\] (.+) : 같은 길이\((\d+)\)의 다른 블록 → 기존 것 유지\. 다음 블록이 승부를 가른다\.$/,
+    (m) => t("log.nForkKeep", { name: m[1], len: m[2] }),
+  ],
+  // --- 탭 7: 이중지불 공격 ---
+  [
+    /^\[준비\] 제네시스 생성\. 판매자는 결제 후 컨펌 (\d+)개를 기다렸다 노트북을 발송합니다\.$/,
+    (m) => t("log.aReady", { n: m[1] }),
+  ],
+  [/^\[무시\] 이미 결제가 시작됐습니다\. 초기화 후 다시 시도하세요\.$/, () => t("log.aIgnoreStarted")],
+  [
+    /^\[① 결제\] 공격자 → 판매자 (.+) BTC\(노트북값\) 거래가 공개 체인 블록 #(\d+)에 담김 \(컨펌 1개\)\.$/,
+    (m) => t("log.aPay", { amt: m[1], id: m[2] }),
+  ],
+  [/^\[공격 준비\] 공격자는 '결제 직전' 지점에서 몰래 다른 체인을 파기 시작합니다 😈$/, () => t("log.aPrep")],
+  [/^\[안내\] 먼저 '① 결제 방송'을 눌러 주세요\.$/, () => t("log.aNeedPay")],
+  [
+    /^\[정직한 채굴\] 공개 체인에 블록 #(\d+) 추가 → 결제 컨펌 (\d+)개$/,
+    (m) => t("log.aHonest", { id: m[1], n: m[2] }),
+  ],
+  [
+    /^\[공격자 채굴 😈\] 비밀 블록 #(\d+): '공격자 → 공격자 (.+) BTC'로 결제를 무효화하는 역사 시작$/,
+    (m) => t("log.aSecret1", { id: m[1], amt: m[2] }),
+  ],
+  [/^\[공격자 채굴 😈\] 비밀 블록 #(\d+) \(아직 아무도 모름\)$/, (m) => t("log.aSecret", { id: m[1] })],
+  [/^\s*현재 길이 — 공개 (\d+) vs 공격자 (\d+)$/, (m) => t("log.aLen", { a: m[1], b: m[2] })],
+  [/^\[안내\] 먼저 결제부터 시작하세요\.$/, () => t("log.aNeedPay2")],
+  [/^\[무시\] 이미 공개했습니다\. 초기화 후 다시 해보세요\.$/, () => t("log.aIgnoreRevealed")],
+  [
+    /^\[💥 공개\] 공격자 체인\(길이 (\d+)\)이 공개 체인\(길이 (\d+)\)보다 김 → 네트워크가 재구성\(reorg\)!$/,
+    (m) => t("log.aRevealWin", { a: m[1], b: m[2] }),
+  ],
+  [
+    /^\[재구성\] 공개 체인의 '공격자 → 판매자' 결제가 사라지고, '공격자 → 공격자'로 대체됨 ⚠️$/,
+    () => t("log.aReorg"),
+  ],
+  [
+    /^\[결과\] 😈 공격 성공! 판매자는 이미 노트북을 발송했는데 돈은 공격자에게 돌아갔습니다\.$/,
+    () => t("log.aWin"),
+  ],
+  [
+    /^\[결과\] 결제는 되돌려졌지만, 판매자가 아직 노트북을 안 보내서 실질 피해는 없습니다\.$/,
+    () => t("log.aWinNoShip"),
+  ],
+  [
+    /^\[💥 공개\] 공격자 체인\(길이 (\d+)\)이 공개 체인\(길이 (\d+)\) 이하 → 네트워크가 무시!$/,
+    (m) => t("log.aRevealLose", { a: m[1], b: m[2] }),
+  ],
+  [/^\[결과\] ✅ 공격 실패! 정직한 체인이 더 길어 결제가 그대로 확정됩니다\.$/, () => t("log.aLose")],
+  [
+    /^\[판매자 📦\] 결제 컨펌 (\d+)개 확인 → 노트북 발송 완료! \(현실에선 되돌릴 수 없음\)$/,
+    (m) => t("log.aShip", { n: m[1] }),
+  ],
+];
+
+// 엔진 원문(한국어) → 현재 언어. 한국어면 원문 그대로, 못 알아본 문장도 원문 그대로.
+function trEngine(line) {
+  if (getLang() === "ko") return line;
+  for (const [re, fn] of ENGINE_LOG_PATTERNS) {
+    const m = String(line).match(re);
+    if (m) return fn(m);
+  }
+  return line;
+}
+
+// ---------- 엔진 로그 콘솔 공용 (원문 저장 → 번역 렌더 → 언어 전환 시 리렌더) ----------
+const engineLogStore = { console: [], uConsole: [], netLog: [], dsLog: [] };
+
+function engineLogDiv(line, clsFn) {
+  const div = document.createElement("div");
+  div.className = clsFn(line); // 분류는 항상 원문(한국어) 기준
+  div.textContent = trEngine(line);
+  return div;
+}
+
+function appendEngineLogs(boxId, lines, clsFn) {
+  const box = $(boxId);
+  if (!box) return;
+  for (const line of lines) {
+    engineLogStore[boxId].push(line);
+    box.appendChild(engineLogDiv(line, clsFn));
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearEngineLog(boxId) {
+  engineLogStore[boxId] = [];
+  const box = $(boxId);
+  if (box) box.innerHTML = "";
+}
+
+function rerenderEngineLog(boxId, clsFn) {
+  const box = $(boxId);
+  if (!box) return;
+  box.innerHTML = "";
+  for (const line of engineLogStore[boxId]) box.appendChild(engineLogDiv(line, clsFn));
+  box.scrollTop = box.scrollHeight;
+}
+
+// ---------- "붙어있는" 상태 메시지의 언어 전환 대응 ----------
+// 송금 결과·위조 판정·채굴 상태처럼 화면에 남아 있는 마지막 메시지는
+// 그리는 함수를 등록해 두고, 언어가 바뀌면 같은 함수를 다시 실행해 새 언어로 칠한다.
+const stickies = new Map();
+function sticky(id, fn) {
+  stickies.set(id, fn);
+  fn();
+}
+function clearSticky(...ids) {
+  for (const id of ids) stickies.delete(id);
+}
+document.addEventListener("i18n:changed", () => {
+  for (const fn of stickies.values()) fn();
+});
+
 // ---------- 복사 버튼 (호버 시 나타나 전체 값을 클립보드로) ----------
 // 생략(…)된 주소·txid·공개키를 Ctrl+F 검색/비교하려 할 때 전체 값을 바로 복사.
 function copyBtn(value, cls = "") {
+  const label = t("js.copyTitle");
   return `<button type="button" class="copy-btn ${cls}" data-copy="${esc(
     String(value)
-  )}" title="전체 값 복사" aria-label="전체 값 복사">⧉</button>`;
+  )}" title="${esc(label)}" aria-label="${esc(label)}">⧉</button>`;
 }
 
 async function copyToClipboard(text) {
@@ -93,6 +318,242 @@ document.addEventListener("click", async (e) => {
 // ============================================================
 // 탭 전환
 // ============================================================
+// 숫자 입력창은 직접 타이핑하면 max/min을 넘길 수 있다(HTML max는 스피너만 제한).
+// 값을 확정하는 순간(change) min~max 범위로 자동 보정해 "입력은 되는데 적용 안 됨" 혼란을 없앤다.
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement) || el.type !== "number") return;
+  const v = Number(el.value);
+  if (!Number.isFinite(v)) return; // 빈칸/잘못된 값은 사용자가 고치게 둔다
+  const min = el.min !== "" ? Number(el.min) : -Infinity;
+  const max = el.max !== "" ? Number(el.max) : Infinity;
+  const clamped = Math.min(max, Math.max(min, v));
+  if (String(clamped) !== el.value) el.value = String(clamped);
+});
+
+// ============================================================
+// 커스텀 컨트롤 UI — 브라우저 기본 위젯을 앱 테마로 대체
+// ============================================================
+
+// ---------- 숫자 input 커스텀 스테퍼 (네이티브 화살표 대체) ----------
+// step 값의 소수 자릿수를 구해 부동소수 오차(0.1+0.2=0.30000004)를 막는다.
+function stepDecimals(step) {
+  const s = String(step);
+  const i = s.indexOf(".");
+  return i < 0 ? 0 : s.length - i - 1;
+}
+
+function enhanceNumberInput(input) {
+  if (input.dataset.enhanced) return;
+  input.dataset.enhanced = "1";
+
+  const wrap = document.createElement("span");
+  wrap.className = "num-wrap";
+  // 인라인 폭이 있으면 래퍼로 옮기고 입력은 래퍼를 꽉 채운다.
+  // (CSS 클래스로 폭이 정해진 경우는 그대로 두어 레이아웃을 유지)
+  if (input.style.width) {
+    wrap.style.width = input.style.width;
+    input.style.width = "100%";
+  }
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const stepper = document.createElement("span");
+  stepper.className = "num-stepper";
+  stepper.innerHTML =
+    `<button type="button" class="num-step up" tabindex="-1" aria-label="+"><span class="caret">▲</span></button>` +
+    `<button type="button" class="num-step down" tabindex="-1" aria-label="−"><span class="caret">▼</span></button>`;
+  wrap.appendChild(stepper);
+
+  const upBtn = stepper.querySelector(".up");
+  const downBtn = stepper.querySelector(".down");
+
+  const bounds = () => ({
+    min: input.min !== "" ? Number(input.min) : -Infinity,
+    max: input.max !== "" ? Number(input.max) : Infinity,
+    step: Number(input.step) || 1,
+  });
+
+  const refreshDisabled = () => {
+    const { min, max } = bounds();
+    const v = Number(input.value);
+    const cur = Number.isFinite(v) ? v : 0;
+    upBtn.disabled = cur >= max;
+    downBtn.disabled = cur <= min;
+  };
+
+  const bump = (dir) => {
+    if (input.disabled) return;
+    const { min, max, step } = bounds();
+    const cur = Number.isFinite(Number(input.value)) ? Number(input.value) : (min > -Infinity ? min : 0);
+    let next = cur + dir * step;
+    next = Math.min(max, Math.max(min, next));
+    next = Number(next.toFixed(stepDecimals(step)));
+    if (String(next) === input.value) return;
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    refreshDisabled();
+  };
+
+  // 누르는 동안 반복 (짧게 지연 후 가속)
+  const hold = (dir) => (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    bump(dir);
+    let timer, interval;
+    const clear = () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener("mouseup", clear);
+      window.removeEventListener("mouseleave", clear);
+    };
+    timer = setTimeout(() => {
+      interval = setInterval(() => bump(dir), 60);
+    }, 350);
+    window.addEventListener("mouseup", clear);
+    window.addEventListener("mouseleave", clear);
+  };
+
+  upBtn.addEventListener("mousedown", hold(1));
+  downBtn.addEventListener("mousedown", hold(-1));
+  input.addEventListener("input", refreshDisabled);
+  input.addEventListener("change", refreshDisabled);
+  refreshDisabled();
+}
+
+function enhanceNumberInputs(root = document) {
+  root.querySelectorAll('input[type="number"]').forEach(enhanceNumberInput);
+}
+
+// ---------- 커스텀 셀렉트 (네이티브 <select> 대체, 프로그레시브 인핸스) ----------
+// 원본 <select>는 폼 값·접근성·기존 JS(.value/change)를 위해 그대로 두고 숨긴다.
+// 표시는 커스텀 드롭다운이 담당하고, 선택 시 원본 select에 반영 + change 발생.
+function enhanceSelect(select) {
+  if (select.dataset.enhanced) return;
+  select.dataset.enhanced = "1";
+
+  const wrap = document.createElement("div");
+  wrap.className = "cs-select";
+  if (select.style.width) wrap.style.width = select.style.width;
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "cs-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.innerHTML = `<span class="cs-label"></span><span class="cs-caret">▾</span>`;
+
+  const menu = document.createElement("ul");
+  menu.className = "cs-menu";
+  menu.setAttribute("role", "listbox");
+  menu.hidden = true;
+
+  select.classList.add("cs-native");
+  select.setAttribute("tabindex", "-1");
+  select.parentNode.insertBefore(wrap, select);
+  wrap.appendChild(select);
+  wrap.appendChild(trigger);
+  wrap.appendChild(menu);
+
+  const labelEl = trigger.querySelector(".cs-label");
+  const options = () => Array.from(select.options);
+
+  // 원본 <option>의 (번역된) 텍스트로 메뉴와 라벨을 다시 그린다.
+  const sync = () => {
+    labelEl.textContent = select.options[select.selectedIndex]?.textContent ?? "";
+    menu.innerHTML = options()
+      .map(
+        (o) =>
+          `<li role="option" data-value="${esc(o.value)}" aria-selected="${
+            o.value === select.value ? "true" : "false"
+          }">${esc(o.textContent)}</li>`
+      )
+      .join("");
+  };
+  sync();
+
+  const close = () => {
+    menu.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  };
+  const open = () => {
+    menu.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    const active = menu.querySelector('[aria-selected="true"]') || menu.firstElementChild;
+    menu.querySelectorAll(".cs-active").forEach((el) => el.classList.remove("cs-active"));
+    if (active) active.classList.add("cs-active");
+  };
+  const toggle = () => (menu.hidden ? open() : close());
+
+  const choose = (value) => {
+    if (select.value !== value) {
+      select.value = value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    sync();
+    close();
+    trigger.focus();
+  };
+
+  trigger.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  });
+
+  menu.addEventListener("click", (e) => {
+    const li = e.target.closest("[data-value]");
+    if (!li) return;
+    choose(li.dataset.value);
+  });
+
+  // 키보드 접근성
+  function moveActive(dir) {
+    const items = Array.from(menu.children);
+    let idx = items.findIndex((el) => el.classList.contains("cs-active"));
+    idx = Math.max(0, Math.min(items.length - 1, idx + dir));
+    items.forEach((el) => el.classList.remove("cs-active"));
+    items[idx]?.classList.add("cs-active");
+  }
+  trigger.addEventListener("keydown", (e) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        menu.hidden ? open() : moveActive(1);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        menu.hidden ? open() : moveActive(-1);
+        break;
+      case "Enter":
+      case " ": {
+        e.preventDefault();
+        if (menu.hidden) { open(); break; }
+        const active = menu.querySelector(".cs-active");
+        if (active) choose(active.dataset.value);
+        break;
+      }
+      case "Escape":
+        close();
+        break;
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!menu.hidden && !wrap.contains(e.target)) close();
+  });
+
+  // 언어 전환 시 원본 option 텍스트가 번역되므로 라벨·메뉴를 다시 동기화한다.
+  document.addEventListener("i18n:changed", sync);
+  // 외부에서 select.value를 바꿨을 때도 반영되도록 change를 듣는다.
+  select.addEventListener("change", sync);
+}
+
+function enhanceSelects(root = document) {
+  root.querySelectorAll("select").forEach(enhanceSelect);
+}
+
 $("tabs").addEventListener("click", (e) => {
   const btn = e.target.closest(".tab-btn");
   if (!btn) return;
@@ -103,9 +564,24 @@ $("tabs").addEventListener("click", (e) => {
   );
 });
 
+// 다국어 초기화 (엔진 로딩과 무관하게 즉시 적용). 언어 변경 시 엔진 상태 문구도 갱신.
+initI18n();
+document.addEventListener("i18n:changed", () => {
+  const badge = $("engineBadge");
+  const st = $("engineStatus");
+  if (!badge || !st) return;
+  if (badge.classList.contains("ready")) st.textContent = t("header.engineReady");
+  else if (badge.classList.contains("error")) st.textContent = t("header.engineError");
+  else st.textContent = t("header.engineLoading");
+});
+
 // WASM과 무관하게 바로 켜두는 UI(툴팁 · 곡선 시각화). 엔진 로딩 실패해도 떠야 한다.
 setupTooltips();
 setupCurveViz();
+
+// 브라우저 기본 위젯을 앱 테마로 대체 (정적 HTML 요소는 지금 바로 적용)
+enhanceNumberInputs();
+enhanceSelects();
 
 // ============================================================
 // 메인: WASM 초기화 후 모든 기능 연결
@@ -113,7 +589,7 @@ setupCurveViz();
 init()
   .then(() => {
     $("engineBadge").classList.add("ready");
-    $("engineStatus").textContent = "Rust 엔진(WASM) 실행 중";
+    $("engineStatus").textContent = t("header.engineReady");
     setupSha();
     setupMiningLab();
     setupChainSim();
@@ -121,10 +597,36 @@ init()
     setupAnatomy();
     setupNetwork();
     setupDoubleSpend();
+
+    // 언어 전환 시 t()로 그려진 동적 UI를 현재 상태 그대로 다시 렌더
+    document.addEventListener("i18n:changed", () => {
+      if (engine) {
+        render();
+        rerenderEngineLog("console", csLogClass);
+        // 검증 결과 배너가 떠 있으면 새 언어로 다시 계산해 표시
+        if ($("verdict").style.display !== "none" && $("verdict").style.display !== "")
+          runValidate();
+      }
+      if (utxo) {
+        renderUtxoPool();
+        rerenderEngineLog("uConsole", uLogClass);
+      }
+      buildMerkle();
+      if (anMiner) renderHeader(JSON.parse(anMiner.info()));
+      if (netEngine) {
+        renderNet();
+        rerenderEngineLog("netLog", netLogClass);
+      }
+      if (dsEngine) {
+        renderDs();
+        renderDsCalc();
+        rerenderEngineLog("dsLog", dsLogClass);
+      }
+    });
   })
   .catch((err) => {
     $("engineBadge").classList.add("error");
-    $("engineStatus").textContent = "엔진 로딩 실패 (콘솔 확인)";
+    $("engineStatus").textContent = t("header.engineError");
     console.error(err);
   });
 
@@ -145,7 +647,7 @@ function setupTooltips() {
     h.removeAttribute("title");
     h.setAttribute("tabindex", "0");
     h.setAttribute("role", "button");
-    h.setAttribute("aria-label", "도움말");
+    h.setAttribute("aria-label", t("js.helpAria"));
   });
 
   function show(h) {
@@ -291,9 +793,7 @@ function setupCurveViz() {
 
     const rd = document.getElementById("curveRead");
     if (rd)
-      rd.innerHTML = `점프 횟수(개인키 d) = <b>${d}</b> · 착지점(공개키 Q) = <b>${d}G</b> ≈ (${Q.x.toFixed(
-        2
-      )}, ${Q.y.toFixed(2)})`;
+      rd.innerHTML = t("js.curveRead", { d, x: Q.x.toFixed(2), y: Q.y.toFixed(2) });
     const ab = document.getElementById("curveAdd");
     if (ab) ab.disabled = d >= MAXD;
   }
@@ -309,6 +809,7 @@ function setupCurveViz() {
     render();
   });
   render();
+  document.addEventListener("i18n:changed", render);
 }
 
 // ============================================================
@@ -353,11 +854,17 @@ function setupSha() {
     const a = avA.value, b = avB.value;
     let charDiff = Math.abs(a.length - b.length);
     for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) charDiff++;
-    $("avDelta").textContent = a === b ? "동일한 입력" : `${charDiff}글자`;
+    $("avDelta").textContent = a === b ? t("sha.sameInput") : t("sha.nChars", { n: charDiff });
   };
   avA.addEventListener("input", renderAv);
   avB.addEventListener("input", renderAv);
   renderAv();
+
+  // 언어 전환 시 data-i18n 치환으로 초기화된 결과 값(#shaLen 등)을 다시 채운다
+  document.addEventListener("i18n:changed", () => {
+    render();
+    renderAv();
+  });
 
   // --- 미니 블록체인: 해시가 블록을 잇는다 ---
   setupMiniChain();
@@ -382,36 +889,38 @@ function setupMiniChain() {
     .map((b, i) => {
       const link =
         i > 0
-          ? `<div class="mc-link" title="이 블록의 '이전 해시' = 바로 앞 블록의 '이 블록 해시'"></div>`
+          ? `<div class="mc-link" data-i18n-attr="title:mc.linkTip" title="이 블록의 '이전 해시' = 바로 앞 블록의 '이 블록 해시'"></div>`
           : "";
       return `${link}
       <div class="mc-block ${i === 0 ? "genesis" : ""}">
         <div class="mc-head">
-          <span class="id">블록 #${i + 1}</span>
-          ${i === 0 ? '<span class="tag">제네시스(첫 블록)</span>' : ""}
+          <span class="id"><span data-i18n="mc.block">블록</span> #${i + 1}</span>
+          ${i === 0 ? '<span class="tag" data-i18n="mc.genesis">제네시스(첫 블록)</span>' : ""}
         </div>
         <div class="mc-row">
-          <span class="k">데이터</span>
+          <span class="k" data-i18n="mc.data">데이터</span>
           <input id="mcData${i}" value="${esc(b.data)}" />
         </div>
         <div class="mc-row">
           <span class="k">nonce</span>
           <div class="mc-nonce">
             <input id="mcNonce${i}" type="number" value="0" />
-            <button class="btn sm" data-mine="${i}">⛏ 채굴 (해시 앞을 0으로)</button>
+            <button class="btn sm" data-mine="${i}" data-i18n="mc.mine">⛏ 채굴 (해시 앞을 0으로)</button>
           </div>
         </div>
         <div class="mc-row">
-          <span class="k">이전 해시</span>
+          <span class="k" data-i18n="mc.prevHash">이전 해시</span>
           <span class="mc-hash prev" id="mcPrev${i}"></span>
         </div>
         <div class="mc-row">
-          <span class="k">이 블록 해시</span>
+          <span class="k" data-i18n="mc.thisHash">이 블록 해시</span>
           <span class="mc-hash self" id="mcHash${i}"></span>
         </div>
       </div>`;
     })
     .join("");
+  applyI18n(box); // 동적 생성 직후 현재 언어 적용
+  enhanceNumberInputs(box); // 동적 생성된 nonce 입력에 커스텀 스테퍼 적용
 
   const hashOf = (prev, i) =>
     sha256(prev + $(`mcData${i}`).value + $(`mcNonce${i}`).value);
@@ -451,9 +960,8 @@ function setupMiniChain() {
     const nonceEl = $(`mcNonce${i}`);
     const hashEl = $(`mcHash${i}`);
     const btn = box.querySelector(`[data-mine="${i}"]`);
-    const label = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "⛏ 채굴 중…";
+    btn.textContent = t("mc.mining");
 
     let n = 0;
     const step = () => {
@@ -463,7 +971,7 @@ function setupMiniChain() {
       if (h.startsWith("0")) {
         mining.delete(i);
         btn.disabled = false;
-        btn.textContent = label;
+        btn.textContent = t("mc.mine");
         recompute(i); // 정답을 찾았으니 뒤 블록까지 갱신 + 강조
         return;
       }
@@ -503,29 +1011,56 @@ function setupMiningLab() {
   let rafId = null;
   let slowTimer = null;
 
-  // 시도 한 줄을 노가다 로그에 추가
-  function logAttempt(n, hash, ok) {
-    const short = hash.slice(0, 24);
+  // 로그를 "원시 데이터"로도 기억해 언어 전환 시 새 언어로 전부 다시 그린다.
+  const logRaw = [];
+
+  function attemptDiv(e) {
+    const short = e.hash.slice(0, 24);
     const m = short.match(/^0+/);
     const z = m ? m[0].length : 0;
     const hl = `<span class="lead0">${short.slice(0, z)}</span>${esc(short.slice(z))}`;
     const div = document.createElement("div");
-    div.className = "line " + (ok ? "win" : "fail");
-    div.innerHTML = ok
-      ? `✅ nonce=${fmtInt(n)} → <span class="h">${hl}…</span>  목표 달성! 0이 충분함`
-      : `❌ nonce=${fmtInt(n)} → <span class="h">${hl}…</span>`;
-    logEl.appendChild(div);
+    div.className = "line " + (e.ok ? "win" : "fail");
+    div.innerHTML = e.ok
+      ? `✅ nonce=${fmtInt(e.n)} → <span class="h">${hl}…</span>  ${t("js.powWin")}`
+      : `❌ nonce=${fmtInt(e.n)} → <span class="h">${hl}…</span>`;
+    return div;
+  }
+  function noteDiv(e) {
+    const div = document.createElement("div");
+    div.className = "line " + (e.cls || "skip");
+    div.textContent = t(e.key, e.params);
+    return div;
+  }
+  const logDiv = (e) => (e.type === "attempt" ? attemptDiv(e) : noteDiv(e));
+
+  function pushLog(entry) {
+    logRaw.push(entry);
+    logEl.appendChild(logDiv(entry));
     // 너무 길어지지 않게 최근 200줄만 유지
+    while (logRaw.length > 200) logRaw.shift();
     while (logEl.childElementCount > 200) logEl.removeChild(logEl.firstChild);
     logEl.scrollTop = logEl.scrollHeight;
   }
-  function logNote(text) {
-    const div = document.createElement("div");
-    div.className = "line skip";
-    div.textContent = text;
-    logEl.appendChild(div);
-    logEl.scrollTop = logEl.scrollHeight;
+
+  // 시도 한 줄을 노가다 로그에 추가
+  function logAttempt(n, hash, ok) {
+    pushLog({ type: "attempt", n, hash, ok });
   }
+  function logNote(key, params, cls) {
+    pushLog({ type: "note", key, params, cls });
+  }
+
+  // 언어 전환 시 로그 전체 + 채굴 기록 + 목표 표기를 새 언어로 다시 렌더
+  // (목표 문구는 data-i18n 치환으로 #powTarget이 기본값 000으로 초기화되므로 다시 채운다)
+  document.addEventListener("i18n:changed", () => {
+    logEl.innerHTML = "";
+    for (const e of logRaw) logEl.appendChild(logDiv(e));
+    logEl.scrollTop = logEl.scrollHeight;
+    renderPowHistory();
+    updateTarget();
+    $("powPreimage").textContent = lastPreimage;
+  });
 
   const updateTarget = () => {
     const d = Number(diffEl.value);
@@ -541,12 +1076,15 @@ function setupMiningLab() {
   function resetStage() {
     $("powHash").classList.remove("found");
     $("powHash").innerHTML = "—";
-    $("powPreimage").textContent = "—";
+    lastPreimage = "—";
+    $("powPreimage").textContent = lastPreimage;
     $("powNonce").textContent = "0";
     $("powAttempts").textContent = "0";
     $("powRate").textContent = "0";
     $("powElapsed").textContent = "0.0s";
-    logEl.innerHTML = `<div class="line init">⛏ 채굴을 시작하면 시도 과정이 여기 한 줄씩 찍힙니다.</div>`;
+    logRaw.length = 0;
+    logEl.innerHTML = "";
+    logNote("js.powIdle", undefined, "init");
   }
 
   function stop() {
@@ -563,6 +1101,7 @@ function setupMiningLab() {
   }
 
   // 화면 상단 통계 + 현재 해시 갱신
+  let lastPreimage = "—"; // 언어 전환 시 data-i18n 치환으로 지워진 값을 복원하기 위해 기억
   function updateStage(data, shownNonce, hash, found) {
     const elapsed = (performance.now() - startTime) / 1000;
     $("powNonce").textContent = fmtInt(shownNonce);
@@ -570,7 +1109,8 @@ function setupMiningLab() {
     $("powRate").textContent = fmtInt(Math.round(attempts / Math.max(elapsed, 0.001)));
     $("powElapsed").textContent = elapsed.toFixed(1) + "s";
     $("powHash").innerHTML = hlLeadingZeros(hash);
-    $("powPreimage").textContent = pow_preimage(data, BigInt(shownNonce));
+    lastPreimage = pow_preimage(data, BigInt(shownNonce));
+    $("powPreimage").textContent = lastPreimage;
     return elapsed;
   }
 
@@ -579,7 +1119,7 @@ function setupMiningLab() {
     const elapsed = updateStage(data, winNonce, hash, true);
     $("powHash").classList.add("found");
     logAttempt(winNonce, hash, true);
-    logNote(`총 ${fmtInt(attempts)}번 해시를 계산해서야 0이 ${difficulty}개인 해시를 찾았어요. (소요 ${elapsed.toFixed(2)}초)`);
+    logNote("js.powDone", { n: fmtInt(attempts), d: difficulty, s: elapsed.toFixed(2) });
     addPowHistory(difficulty, attempts, elapsed);
     stop();
   }
@@ -598,11 +1138,12 @@ function setupMiningLab() {
     diffEl.disabled = true;
     $("powHash").classList.remove("found");
     $("powAnim").hidden = false; // 곡괭이질 애니메이션 표시
+    logRaw.length = 0;
     logEl.innerHTML = "";
 
     const data = dataEl.value;
     const difficulty = Number(diffEl.value);
-    logNote(`목표: SHA-256("${data}" + nonce) 의 앞자리가 "${"0".repeat(difficulty)}" 이 될 때까지 nonce를 0,1,2,… 늘려본다.`);
+    logNote("js.powGoal", { data, zeros: "0".repeat(difficulty) });
 
     // --- 1단계: 한 개씩 천천히 (진짜 노가다 체감) ---
     const slowStep = (i) => {
@@ -619,7 +1160,7 @@ function setupMiningLab() {
       if (i + 1 < SLOW_COUNT) {
         slowTimer = setTimeout(() => slowStep(i + 1), 75);
       } else {
-        logNote("… 이런 식으로 계속 실패합니다. 너무 많아서 이제부터는 빠르게 진행하며 표본만 보여줄게요 …");
+        logNote("js.powFast");
         rafId = requestAnimationFrame(fastTick);
       }
     };
@@ -651,17 +1192,18 @@ function setupMiningLab() {
   stopBtn.addEventListener("click", stop);
 
   const history = [];
-  function addPowHistory(d, att, sec) {
-    history.unshift({ d, att, sec });
+  function renderPowHistory() {
+    if (!history.length) return;
     $("powHistory").innerHTML =
-      "<hr class='sep'><b>채굴 기록</b> (난이도가 1 오를 때마다 시도 횟수가 어떻게 폭증하는지 보세요)<br>" +
+      `<hr class='sep'>${t("js.powHistH")}<br>` +
       history
         .slice(0, 8)
-        .map(
-          (h) =>
-            `난이도 <b class="mono">${h.d}</b> → ${fmtInt(h.att)}회 시도, ${h.sec.toFixed(2)}초`
-        )
+        .map((h) => t("js.powHistRow", { d: h.d, n: fmtInt(h.att), s: h.sec.toFixed(2) }))
         .join("<br>");
+  }
+  function addPowHistory(d, att, sec) {
+    history.unshift({ d, att, sec });
+    renderPowHistory();
   }
 }
 
@@ -695,12 +1237,13 @@ function setupChainSim() {
     const to = $("txTo").value.trim();
     const amount = Number($("txAmount").value);
     if (!from || !to || !(amount > 0)) {
-      flashTxMsg("주소와 0보다 큰 금액을 입력하세요.", false);
+      flashTxMsg("js.txInvalid", undefined, false);
       return;
     }
     const ok = engine.add_transaction(from, to, amount);
     flashTxMsg(
-      ok ? `승인: ${from} → ${to} (${fmtBtc(amount)} BTC) 멤풀 대기` : `거부됨: ${from} 잔액이 부족합니다.`,
+      ok ? "js.txOk" : "js.txRejected",
+      ok ? { from, to, amt: fmtBtc(amount) } : { from },
       ok
     );
     pullLogs();
@@ -757,7 +1300,9 @@ function startEngine() {
     u64(c.halving),
     Math.max(1, Math.floor(c.maxtx))
   );
-  $("console").innerHTML = "";
+  clearEngineLog("console");
+  clearSticky("txMsg");
+  $("txMsg").textContent = "";
   $("verdict").style.display = "none";
   pullLogs();
   render();
@@ -796,7 +1341,7 @@ function render() {
 function renderBalances(balances) {
   const box = $("balances");
   if (!balances.length) {
-    box.innerHTML = `<div class="empty">아직 잔액이 없습니다. 블록을 채굴해 보세요.</div>`;
+    box.innerHTML = `<div class="empty">${t("js.noBalances")}</div>`;
     return;
   }
   const max = Math.max(...balances.map((b) => b.amount), 1);
@@ -815,7 +1360,7 @@ function renderBalances(balances) {
 function renderMempool(pending) {
   const box = $("mempool");
   if (!pending.length) {
-    box.innerHTML = `<div class="empty">아직 대기 중인 거래가 없습니다.</div>`;
+    box.innerHTML = `<div class="empty">${t("js.noMempool")}</div>`;
     return;
   }
   box.innerHTML = pending.map((tx) => txRow(tx)).join("");
@@ -826,8 +1371,8 @@ function txRow(tx, opts = {}) {
   const cls = `tx ${coinbase ? "coinbase" : ""} ${opts.tampered ? "tampered" : ""}`;
   const tamperBtns =
     opts.tamperKey != null
-      ? `<button class="btn danger sm" data-tamper="${opts.tamperKey}" title="데이터만 바꾸고 해시는 그대로 → 검증 ①(해시 불일치)에서 걸림">조작</button>
-    <button class="btn danger sm" data-tamper-rehash="${opts.tamperKey}" title="바꾼 뒤 해시는 다시 계산(채굴은 생략) → 검증 ③(작업증명)에서 걸림">조작+재해시</button>`
+      ? `<button class="btn danger sm" data-tamper="${opts.tamperKey}" title="${esc(t("js.tamperTip"))}">${t("js.tamperBtn")}</button>
+    <button class="btn danger sm" data-tamper-rehash="${opts.tamperKey}" title="${esc(t("js.tamperRehashTip"))}">${t("js.tamperRehashBtn")}</button>`
       : "";
   return `<div class="${cls}">
     <span class="from">${coinbase ? "⛏ COINBASE" : esc(tx.from)}</span>
@@ -869,11 +1414,11 @@ function renderChain(chain) {
               })
             )
             .join("")
-        : `<div class="empty">거래 없음 (제네시스 블록)</div>`;
+        : `<div class="empty">${t("js.noTxsGenesis")}</div>`;
 
       const link =
         i > 0
-          ? `<div class="link-down" title="이 블록의 prev_hash = 이전 블록의 hash"></div>`
+          ? `<div class="link-down" title="${esc(t("js.linkTip"))}"></div>`
           : "";
 
       return `${link}
@@ -881,20 +1426,20 @@ function renderChain(chain) {
         <div class="block ${isGenesis ? "genesis" : ""} ${bad ? "tampered" : ""}">
           <div class="block-head">
             <span class="id">Block #${block.id}</span>
-            ${isGenesis ? '<span class="tag">제네시스</span>' : ""}
+            ${isGenesis ? `<span class="tag">${t("js.genesisTag")}</span>` : ""}
             <span class="tag nonce">nonce ${fmtInt(block.nonce)}</span>
-            <span class="tag time">${new Date(block.timestamp * 1000).toLocaleTimeString("ko-KR")}</span>
-            ${tampered ? '<span class="tag" style="color:var(--red)">⚠ 위변조 감지 (해시 불일치)</span>' : ""}
-            ${powBad ? '<span class="tag" style="color:var(--red)">⚠ 작업증명 불충족 (채굴 안 됨)</span>' : ""}
+            <span class="tag time">${fmtTime(block.timestamp)}</span>
+            ${tampered ? `<span class="tag" style="color:var(--red)">${t("js.tamperedTag")}</span>` : ""}
+            ${powBad ? `<span class="tag" style="color:var(--red)">${t("js.powBadTag")}</span>` : ""}
           </div>
           <div class="block-field">
-            <span class="lbl">이 블록 해시</span>
+            <span class="lbl">${t("mc.thisHash")}</span>
             <span class="hash-pill self ${powBad ? "bad" : ""}">${hlLeadingZeros(block.hash)}</span>
           </div>
           ${
             tampered
               ? `<div class="block-field">
-                  <span class="lbl" style="color:var(--red)">다시 계산</span>
+                  <span class="lbl" style="color:var(--red)">${t("js.recomputedLbl")}</span>
                   <span class="hash-pill bad">${esc(recomputed)}</span>
                 </div>`
               : ""
@@ -902,13 +1447,13 @@ function renderChain(chain) {
           ${
             powBad
               ? `<div class="block-field">
-                  <span class="lbl" style="color:var(--red)">필요 조건</span>
-                  <span class="hash-pill bad">${esc(target)}… 로 시작해야 함 (0 ${block.difficulty}개)</span>
+                  <span class="lbl" style="color:var(--red)">${t("js.requiredLbl")}</span>
+                  <span class="hash-pill bad">${t("js.requiredVal", { target: esc(target), d: block.difficulty })}</span>
                 </div>`
               : ""
           }
           <div class="block-field">
-            <span class="lbl">이전 해시</span>
+            <span class="lbl">${t("mc.prevHash")}</span>
             <span class="hash-pill prev ${linkBroken ? "bad" : ""}">${esc(block.previous_hash)}</span>
           </div>
           <div class="txs">${txs}</div>
@@ -973,10 +1518,10 @@ function runValidate() {
   box.style.display = "flex";
   if (r.valid) {
     box.className = "verdict ok";
-    box.innerHTML = `<span class="icon">✅</span><div><b>체인 정상</b><br><span class="small">${esc(r.reason)}</span></div>`;
+    box.innerHTML = `<span class="icon">✅</span><div><b>${t("js.chainOk")}</b><br><span class="small">${esc(trEngine(r.reason))}</span></div>`;
   } else {
     box.className = "verdict bad";
-    box.innerHTML = `<span class="icon">🚫</span><div><b>위변조/오류 감지!</b><br><span class="small">${esc(r.reason)}</span></div>`;
+    box.innerHTML = `<span class="icon">🚫</span><div><b>${t("js.chainBad")}</b><br><span class="small">${esc(trEngine(r.reason))}</span></div>`;
   }
 }
 
@@ -986,9 +1531,9 @@ function runValidate() {
 function doTamper(blockIndex, txIndex, rehash = false) {
   const s = snap();
   const tx = s.chain[blockIndex].transactions[txIndex];
-  const newTo = prompt(`받는 사람을 바꿉니다.\n현재: ${tx.to}`, tx.to);
+  const newTo = prompt(t("js.tamperPromptTo", { cur: tx.to }), tx.to);
   if (newTo === null) return;
-  const newAmountStr = prompt(`금액을 바꿉니다.\n현재: ${tx.amount} BTC`, tx.amount);
+  const newAmountStr = prompt(t("js.tamperPromptAmt", { cur: tx.amount }), tx.amount);
   if (newAmountStr === null) return;
   const newAmount = Number(newAmountStr);
   if (Number.isNaN(newAmount)) return;
@@ -1001,37 +1546,30 @@ function doTamper(blockIndex, txIndex, rehash = false) {
   $("verdict").style.display = "none";
   render();
   // 위변조 직후 안내
-  flashTxMsg(
-    rehash
-      ? "조작 후 해시를 다시 계산했어요(채굴은 생략). 해시는 내용과 맞지만 0으로 시작하지 않죠 → '체인 검증'을 눌러 작업증명(③)에서 걸리는지 보세요."
-      : "블록을 조작했습니다(해시는 그대로). '체인 검증'을 눌러 해시 불일치(①)로 탐지되는지 보세요.",
-    false
-  );
+  flashTxMsg(rehash ? "js.tamperedRehashMsg" : "js.tamperedMsg", undefined, false);
 }
 
 // ---------- 로그 콘솔 ----------
-function pullLogs() {
-  const logs = JSON.parse(engine.take_logs());
-  const box = $("console");
-  for (const line of logs) {
-    let cls = "";
-    if (line.includes("[TX]")) cls = "tx";
-    else if (line.includes("[REJECTED]")) cls = "reject";
-    else if (line.includes("[MINING]") || line.includes("[MINED]")) cls = "mine";
-    else if (line.includes("난이도")) cls = "diff";
-    else if (line.includes("[INIT]")) cls = "init";
-    const div = document.createElement("div");
-    div.className = `line ${cls}`;
-    div.textContent = line;
-    box.appendChild(div);
-  }
-  box.scrollTop = box.scrollHeight;
+function csLogClass(line) {
+  let cls = "";
+  if (line.includes("[TX]")) cls = "tx";
+  else if (line.includes("[REJECTED]")) cls = "reject";
+  else if (line.includes("[MINING]") || line.includes("[MINED]")) cls = "mine";
+  else if (line.includes("난이도")) cls = "diff";
+  else if (line.includes("[INIT]")) cls = "init";
+  return `line ${cls}`;
 }
 
-function flashTxMsg(msg, ok) {
-  const el = $("txMsg");
-  el.textContent = msg;
-  el.style.color = ok ? "var(--green)" : "var(--red)";
+function pullLogs() {
+  appendEngineLogs("console", JSON.parse(engine.take_logs()), csLogClass);
+}
+
+function flashTxMsg(key, params, ok) {
+  sticky("txMsg", () => {
+    const el = $("txMsg");
+    el.textContent = t(key, params);
+    el.style.color = ok ? "var(--green)" : "var(--red)";
+  });
 }
 
 // ============================================================
@@ -1065,13 +1603,14 @@ function setupUtxo() {
     const match = calc === (btn.dataset.sighash || "");
     box.querySelector(".sig-hash-calc").textContent = calc;
     box.querySelector(".sig-hash-cmp").innerHTML = match
-      ? `<span class="cmp ok">✅ 계산값 == 엔진의 sighash — 똑같죠? sighash는 "원문을 SHA-256으로 요약한 값"일 뿐이고, 누구나 이렇게 재현·검증할 수 있어요.</span>`
-      : `<span class="cmp bad">❌ 값이 다릅니다. (원문이 바뀌었거나 계산 대상이 다름)</span>`;
+      ? `<span class="cmp ok">${t("js.sigHashOk")}</span>`
+      : `<span class="cmp bad">${t("js.sigHashBad")}</span>`;
   });
   $("uReset").addEventListener("click", () => {
     utxo.free?.();
     utxo = new WasmUtxo();
-    $("uConsole").innerHTML = "";
+    clearEngineLog("uConsole");
+    clearSticky("uMsg", "uFlow", "uForge");
     $("uFlowCard").style.display = "none";
     $("uMsg").textContent = "";
     $("uForgeResult").innerHTML = "";
@@ -1104,9 +1643,9 @@ function coinChip(u, opts = {}) {
   // 이 동전이 "잠긴 주소"(= 공개키 해시). 주인 확인의 기준이라 거래 흐름 칩에 함께 표시.
   const lock =
     opts.showAddr && u.address
-      ? `<span class="lock" title="이 동전이 잠긴 주소(= 공개키 해시): ${esc(
-          u.address
-        )}">🔒 ${esc(shortAddr(u.address))}${copyBtn(u.address, "inline-copy")}</span>`
+      ? `<span class="lock" title="${esc(t("js.coinLockTip", { addr: u.address }))}">🔒 ${esc(
+          shortAddr(u.address)
+        )}${copyBtn(u.address, "inline-copy")}</span>`
       : "";
   return `<div class="${cls}" data-key="${esc(u.key)}">
     <span class="amt">${fmtBtc(u.amount)}<small> BTC</small></span>
@@ -1136,7 +1675,7 @@ function renderUtxoPool(opts = {}) {
   renderWallets(s);
 
   if (!s.utxos.length) {
-    box.innerHTML = `<div class="empty">아직 UTXO가 없습니다. ①에서 코인을 발행해 보세요.</div>`;
+    box.innerHTML = `<div class="empty">${t("ux.poolEmpty")}</div>`;
     return;
   }
 
@@ -1161,7 +1700,7 @@ function renderUtxoPool(opts = {}) {
         <div class="who ${isMiner ? "miner" : ""}">
           <span class="who-name">${esc(label)}</span>
           <span class="who-addr" title="${esc(addr)}">${esc(shortAddr(addr))}${copyBtn(addr, "inline-copy")}</span>
-          <span class="sum">잔액 ${fmtBtc(total)} BTC · 동전 ${coins.length}개</span>
+          <span class="sum">${t("js.ownerSum", { bal: fmtBtc(total), n: coins.length })}</span>
         </div>
         <div class="coins">${chips}</div>
       </div>`;
@@ -1183,7 +1722,7 @@ function renderWallets(s) {
   const box = $("uWallets");
   const wallets = s.wallets || [];
   if (!wallets.length) {
-    box.innerHTML = `<div class="empty">아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.</div>`;
+    box.innerHTML = `<div class="empty">${t("ux.walletEmpty")}</div>`;
     return;
   }
   const balByAddr = new Map((s.balances || []).map((b) => [b.address, b.amount]));
@@ -1194,9 +1733,9 @@ function renderWallets(s) {
       return `<div class="wallet">
         <div class="w-name"><span class="w-key">🔑</span>${esc(w.label)}</div>
         <div>
-          <div class="w-row"><span class="w-tag">주소</span><span class="w-addr">${esc(w.address)}${copyBtn(w.address, "inline-copy")}</span></div>
-          <div class="w-row"><span class="w-tag">공개키</span><span class="w-pub">${esc(w.pubkey)}${copyBtn(w.pubkey, "inline-copy")}</span></div>
-          <div class="w-row"><span class="w-tag">잔액</span><span class="w-bal">${fmtBtc(bal)} BTC</span></div>
+          <div class="w-row"><span class="w-tag">${t("js.wAddr")}</span><span class="w-addr">${esc(w.address)}${copyBtn(w.address, "inline-copy")}</span></div>
+          <div class="w-row"><span class="w-tag">${t("js.wPub")}</span><span class="w-pub">${esc(w.pubkey)}${copyBtn(w.pubkey, "inline-copy")}</span></div>
+          <div class="w-row"><span class="w-tag">${t("js.wBal")}</span><span class="w-bal">${fmtBtc(bal)} BTC</span></div>
         </div>
       </div>`;
     })
@@ -1211,23 +1750,29 @@ function doUtxoSend() {
   const msg = $("uMsg");
 
   if (!from || !to || !(amount > 0)) {
-    msg.style.color = "var(--red)";
-    msg.textContent = "주소와 0보다 큰 금액을 입력하세요.";
+    sticky("uMsg", () => {
+      msg.style.color = "var(--red)";
+      msg.textContent = t("js.txInvalid");
+    });
     return;
   }
 
   const r = JSON.parse(utxo.send(from, to, amount, fee));
   if (!r.ok) {
-    msg.style.color = "var(--red)";
-    msg.textContent = "거부됨: " + r.error;
+    sticky("uMsg", () => {
+      msg.style.color = "var(--red)";
+      msg.textContent = t("js.sendRejected", { err: trEngine(r.error) });
+    });
     pullUtxoLogs();
     return;
   }
-  msg.style.color = "var(--green)";
-  msg.textContent = `송금 성공! 입력 ${r.spent.length}개 소비 → 출력 ${r.created.length}개 생성`;
+  sticky("uMsg", () => {
+    msg.style.color = "var(--green)";
+    msg.textContent = t("js.sendOk", { nIn: r.spent.length, nOut: r.created.length });
+  });
 
-  // 1) 거래 다이어그램 표시
-  renderUtxoFlow(r, from, to);
+  // 1) 거래 다이어그램 표시 (언어 전환 시 같은 데이터로 다시 그림)
+  sticky("uFlow", () => renderUtxoFlow(r, from, to));
 
   // 2) 풀에서 소비된 동전 강조 후, 잠시 뒤 새 상태로 갱신
   const spentKeys = new Set(r.spent.map((u) => u.key));
@@ -1247,10 +1792,10 @@ function renderUtxoFlow(r, from, to) {
   $("uFlowTxid").textContent = "txid " + r.txid.slice(0, 12) + "…";
 
   $("uFlowInputs").innerHTML = r.spent
-    .map((u) => coinChip(u, { spent: true, showAddr: true, roleText: from + " 소유" }))
+    .map((u) => coinChip(u, { spent: true, showAddr: true, roleText: t("js.ownedBy", { who: from }) }))
     .join("");
   const inSum = r.spent.reduce((a, c) => a + c.amount, 0);
-  $("uFlowInSum").innerHTML = `합계 <b>${fmtBtc(inSum)}</b> BTC`;
+  $("uFlowInSum").innerHTML = t("js.sumBtc", { amt: fmtBtc(inSum) });
 
   $("uFlowOutputs").innerHTML = r.created
     .map((u) =>
@@ -1259,17 +1804,18 @@ function renderUtxoFlow(r, from, to) {
         recipient: !u.change,
         flash: true,
         showAddr: true,
-        roleText: u.change ? `거스름돈 → ${from}` : `→ ${to}`,
+        roleText: u.change ? t("js.changeTo", { who: from }) : `→ ${to}`,
       })
     )
     .join("");
   const outSum = r.created.reduce((a, c) => a + c.amount, 0);
-  $("uFlowOutSum").innerHTML = `합계 <b>${fmtBtc(outSum)}</b> BTC`;
+  $("uFlowOutSum").innerHTML = t("js.sumBtc", { amt: fmtBtc(outSum) });
 
-  $("uFlowEq").innerHTML =
-    `입력 <b>${fmtBtc(inSum)}</b>  =  출력 <b>${fmtBtc(outSum)}</b>  +  ` +
-    `수수료 <span class="fee">${fmtBtc(r.fee)}</span>  ` +
-    `<span class="muted">(수수료는 채굴자 ⛏ 몫)</span>`;
+  $("uFlowEq").innerHTML = t("js.flowEq", {
+    inSum: fmtBtc(inSum),
+    outSum: fmtBtc(outSum),
+    fee: fmtBtc(r.fee),
+  });
 
   renderSigBlock(r);
 }
@@ -1293,23 +1839,23 @@ function sigMsgLegend(message, signerAddress) {
   const items = parts.map((p) => {
     if (p.startsWith("in:")) {
       const [, txid, vout] = p.split(":");
-      return `<div class="leg-in">입력 · 소비할 출처(UTXO) <span class="mono">${esc(
+      return `<div class="leg-in">${t("js.legIn")} <span class="mono">${esc(
         (txid || "").slice(0, 14)
       )}…:${esc(vout || "")}</span></div>`;
     }
     if (p.startsWith("out:")) {
       const [, addr, amt] = p.split(":");
       const isChange = signerAddress && addr === signerAddress;
-      const role = isChange ? "거스름돈 →" : "받는 사람 →";
-      return `<div class="leg-out">출력 · ${role} <span class="mono">${addrLabelHtml(
+      const role = isChange ? t("js.legOutChange") : t("js.legOutRecv");
+      return `<div class="leg-out">${t("js.legOut")} · ${role} <span class="mono">${addrLabelHtml(
         addr || ""
       )}</span> ← <b>${esc(amt || "")}</b> BTC</div>`;
     }
     if (p.startsWith("spending:")) {
       const [, txid, vout] = p.split(":");
-      return `<div class="leg-spend">지금 서명 중인 입력 <span class="mono">${esc(
+      return `<div class="leg-spend">${t("js.legSpending")} <span class="mono">${esc(
         (txid || "").slice(0, 14)
-      )}…:${esc(vout || "")}</span> <span class="muted">(이 부분 때문에 입력마다 sighash가 달라져요)</span></div>`;
+      )}…:${esc(vout || "")}</span> <span class="muted">${t("js.legSpendingNote")}</span></div>`;
     }
     return `<div>${esc(p)}</div>`;
   });
@@ -1326,62 +1872,62 @@ function sigInputCardHTML(s, idx) {
   const bOk = !!s.sigOk;
 
   const aRow = aOk
-    ? `<div><b>(a) 주인 확인</b> ✅ — 공개키를 해시한 주소 <span class="mono">${addrLabelHtml(
+    ? `<div><b>${t("js.vOwner")}</b> ✅ — ${t("js.vOwnerOk1")} <span class="mono">${addrLabelHtml(
         s.signerAddress
-      )}</span> <b>==</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
+      )}</span> <b>==</b> ${t("js.vOwnerOk2")} <span class="mono">${addrLabelHtml(
         s.lockAddress
       )}</span></div>`
-    : `<div class="vfail"><b>(a) 주인 확인</b> ❌ — 서명한 키의 주소 <span class="mono">${addrLabelHtml(
+    : `<div class="vfail"><b>${t("js.vOwner")}</b> ❌ — ${t("js.vOwnerBad1")} <span class="mono">${addrLabelHtml(
         s.signerAddress
-      )}</span> <b>≠</b> 동전이 잠긴 주소 <span class="mono">${addrLabelHtml(
+      )}</span> <b>≠</b> ${t("js.vOwnerOk2")} <span class="mono">${addrLabelHtml(
         s.lockAddress
-      )}</span> <span class="muted">→ 남의 동전! 여기서 거부됩니다.</span></div>`;
+      )}</span> <span class="muted">${t("js.vOwnerBad2")}</span></div>`;
 
   const bRow = aOk
     ? bOk
-      ? `<div><b>(b) 동의 확인</b> ✅ — 서명 <b>(r,s)</b>·sighash <b>z</b>·공개키 <b>Q</b>로 <span class="mono">R′ = z·s⁻¹·G + r·s⁻¹·Q</span> → <b>R′.x == r</b> 성립.</div>`
-      : `<div class="vfail"><b>(b) 동의 확인</b> ❌ — 서명이 이 sighash와 맞지 않습니다.</div>`
-    : `<div class="vskip"><b>(b) 동의 확인</b> — <span class="muted">(a)에서 이미 탈락해 확인까지 안 감. 이 서명은 서명자 키로는 수학적으로 유효하지만, 그 키가 동전 임자가 아니라 소용없어요.</span></div>`;
+      ? `<div><b>${t("js.vConsent")}</b> ✅ — ${t("js.vConsentOk")}</div>`
+      : `<div class="vfail"><b>${t("js.vConsent")}</b> ❌ — ${t("js.vConsentBad")}</div>`
+    : `<div class="vskip"><b>${t("js.vConsent")}</b> — <span class="muted">${t("js.vConsentSkip")}</span></div>`;
 
   const cardCls = aOk && bOk ? "sig-input-card ok" : "sig-input-card bad";
 
   return `
   <div class="${cardCls}">
     <div class="sig-input-head">
-      <span class="sig-input-no">입력 #${idx + 1}</span>
-      <span class="mono sig-input-outpoint" title="${esc(outpoint)}">출처 ${esc(
+      <span class="sig-input-no">${t("js.inputNo", { n: idx + 1 })}</span>
+      <span class="mono sig-input-outpoint" title="${esc(outpoint)}">${t("js.outpoint")} ${esc(
     String(s.txid).slice(0, 10)
   )}…:${s.vout}${copyBtn(outpoint, "inline-copy")}</span>
-      <span class="muted small">잠긴 주소 <span class="mono">${addrLabelHtml(s.lockAddress)}</span></span>
+      <span class="muted small">${t("js.lockAddr")} <span class="mono">${addrLabelHtml(s.lockAddress)}</span></span>
     </div>
 
     <div class="sig-mini">
-      <div class="sig-mini-h">1️⃣ 이 입력의 원문 → SHA-256 → sighash</div>
+      <div class="sig-mini-h">${t("js.sig1H")}</div>
       <div class="mono small sig-msg">${esc(s.message)}${copyBtn(s.message, "inline-copy")}</div>
       <div class="sig-msg-legend">${sigMsgLegend(s.message, s.signerAddress)}</div>
       <button class="btn ghost sm sig-hash-btn" data-msg="${esc(s.message)}" data-sighash="${esc(
     s.sighash
-  )}" style="margin-top:6px">🔁 이 원문을 SHA-256으로 직접 돌려보기</button>
-      <div class="sig-sub-label" style="margin-top:6px">내 브라우저에서 계산한 SHA-256</div>
-      <div class="mono small sig-hash-calc"><span class="muted">위 버튼을 누르면 여기서 직접 계산해요.</span></div>
-      <div class="sig-sub-label" style="margin-top:6px">엔진이 실제 서명에 쓴 sighash</div>
+  )}" style="margin-top:6px">${t("js.sigHashBtn")}</button>
+      <div class="sig-sub-label" style="margin-top:6px">${t("js.sigCalcLbl")}</div>
+      <div class="mono small sig-hash-calc"><span class="muted">${t("js.sigCalcHint")}</span></div>
+      <div class="sig-sub-label" style="margin-top:6px">${t("js.sigEngineLbl")}</div>
       <div class="mono small">${esc(s.sighash)}${copyBtn(s.sighash, "inline-copy")}</div>
       <div class="sig-hash-cmp"></div>
     </div>
 
     <div class="sig-mini">
-      <div class="sig-mini-h">2️⃣ 개인키로 이 sighash에 서명 — ${esc(s.signerLabel || "(미상)")}</div>
-      <div class="muted small" style="margin-bottom:4px">개인키는 비밀이라 <b>화면에 안 나옵니다</b>. 결과 서명은 64바이트 = <b>r</b>(앞 32) ‖ <b>s</b>(뒤 32).</div>
-      <div class="sig-sub-label">서명 r <span class="muted">(앞 32바이트)</span></div>
+      <div class="sig-mini-h">${t("js.sig2H", { who: esc(s.signerLabel || "?") })}</div>
+      <div class="muted small" style="margin-bottom:4px">${t("js.sig2Note")}</div>
+      <div class="sig-sub-label">${t("js.sigR")}</div>
       <div class="mono small">${esc(rHex)}${copyBtn(rHex, "inline-copy")}</div>
-      <div class="sig-sub-label" style="margin-top:4px">서명 s <span class="muted">(뒤 32바이트)</span></div>
+      <div class="sig-sub-label" style="margin-top:4px">${t("js.sigS")}</div>
       <div class="mono small">${esc(sHex)}${copyBtn(sHex, "inline-copy")}</div>
-      <div class="sig-sub-label" style="margin-top:4px">공개키 Q <span class="muted">(= 개인키 d × G · 33바이트 압축)</span></div>
+      <div class="sig-sub-label" style="margin-top:4px">${t("js.sigQ")}</div>
       <div class="mono small">${esc(s.pubkey)}${copyBtn(s.pubkey, "inline-copy")}</div>
     </div>
 
     <div class="sig-mini">
-      <div class="sig-mini-h">3️⃣ 공개키로 검증 <span class="muted">(개인키 없이, 누구나)</span></div>
+      <div class="sig-mini-h">${t("js.sig3H")}</div>
       <div class="sig-verify-rows">
         ${aRow}
         ${bRow}
@@ -1397,34 +1943,22 @@ function sigBlockHTML(r) {
   const multi = inputs.length > 1;
 
   const verdict = r.verified
-    ? `<div class="sig-verdict ok">✅ 검증 통과 — 입력 ${inputs.length}개가 모두 (a) 주소 일치 + (b) 서명 유효. 거래가 적용되었습니다.</div>`
-    : `<div class="sig-verdict bad">🚫 검증 실패 — ${esc(
-        r.error || "서명이 유효하지 않습니다."
-      )} 거래가 거부되어 동전은 그대로 안전합니다. 🔒</div>`;
+    ? `<div class="sig-verdict ok">${t("js.sigVerdictOk", { n: inputs.length })}</div>`
+    : `<div class="sig-verdict bad">${t("js.sigVerdictBad", {
+        err: esc(r.error ? trEngine(r.error) : t("js.sigInvalid")),
+      })}</div>`;
 
   return `
-    <div class="sig-title">🔏 디지털 서명 &amp; 검증 <span class="pill-tag">secp256k1 ECDSA</span></div>
+    <div class="sig-title">${t("js.sigTitle")}</div>
     <div class="muted small" style="margin-bottom:10px">
-      실제 비트코인처럼 <b>입력(소비할 UTXO)마다 각자 서명</b>해요. 각 입력은 "거래 내용 + <b>지금 어느 입력을 쓰는지</b>"를 원문으로 삼아 SHA-256(→ sighash)한 뒤 개인키로 서명합니다. 그래서 <b>입력마다 sighash도 서명도 서로 달라요</b>.${
-        multi
-          ? ` (이번 거래는 입력 <b>${inputs.length}개</b> → 카드 ${inputs.length}장)`
-          : " (이번엔 입력이 1개예요 — 여러 개면 카드도 여러 장 생깁니다.)"
+      ${t("js.sigIntro")}${
+        multi ? t("js.sigMulti", { n: inputs.length }) : t("js.sigSingle")
       }
     </div>
     <div class="sig-input-cards">${cards}</div>
     <details class="aside" style="margin-top:10px">
-      <summary>🔍 (b) 이 검증식이 왜 "위조 불가 증명"이 되나요?</summary>
-      <div class="aside-body">
-        <p>서명자는 개인키 <b>d</b>와 일회용 <b>k</b>로 서명을 만들어요:</p>
-        <p class="mono small">r = (k·G).x  ·  s = k⁻¹·(z + r·d)  mod n</p>
-        <p>검증자는 <b>개인키 없이</b> 공개값만으로 <b>R′ = u₁·G + u₂·Q</b> (u₁=z·s⁻¹, u₂=r·s⁻¹)를 계산합니다. Q = d·G 를 대입하면 <b>R′ = k·G</b> 로 되돌아오고, 그때만 <b>R′.x == r</b>.</p>
-        <ul class="tight">
-          <li>등식이 맞으려면 <b>Q를 만든 그 d</b>로 <b>바로 이 z(sighash)</b>에 서명했어야만 함.</li>
-          <li>거래 내용을 한 글자만 바꿔도 z가 달라져 → <b>R′.x ≠ r</b> → 거부.</li>
-          <li>다른 사람이 서명하면(다른 d·Q) 안 맞아 → 거부.</li>
-        </ul>
-        <p class="muted small">참고: 이 데모(및 현대 비트코인)는 <b>RFC 6979 결정론적 k</b>라, <b>완전히 같은</b> (개인키·sighash)면 서명도 같아요. 그런데 입력마다 원문(sighash)이 달라서 서명도 서로 달라 보이는 거예요.</p>
-      </div>
+      <summary>${t("js.sigAsideSummary")}</summary>
+      <div class="aside-body">${t("js.sigAsideBody")}</div>
     </details>
     ${verdict}`;
 }
@@ -1454,11 +1988,15 @@ function doUtxoForge() {
   const box = $("uForgeResult");
 
   if (!attacker || !victim || !(amount > 0)) {
-    box.innerHTML = `<div class="forge-verdict">공격자·피해자·금액을 올바르게 입력하세요.</div>`;
+    sticky("uForge", () => {
+      box.innerHTML = `<div class="forge-verdict">${t("js.forgeInvalid")}</div>`;
+    });
     return;
   }
   if (attacker === victim) {
-    box.innerHTML = `<div class="forge-verdict">공격자와 피해자가 같으면 그냥 본인 거래예요. 다른 이름을 넣어보세요.</div>`;
+    sticky("uForge", () => {
+      box.innerHTML = `<div class="forge-verdict">${t("js.forgeSame")}</div>`;
+    });
     return;
   }
 
@@ -1468,42 +2006,43 @@ function doUtxoForge() {
 
   if (!r.sighash) {
     // 검증 이전 단계에서 막힘 (예: 피해자 UTXO 부족)
-    box.innerHTML = `<div class="forge-verdict">시도 실패: ${esc(r.error || "")}</div>`;
-    renderSigInto("uForgeSig", { sighash: "" }); // 숨김
+    sticky("uForge", () => {
+      box.innerHTML = `<div class="forge-verdict">${t("js.forgeFailPre", { err: esc(trEngine(r.error || "")) })}</div>`;
+      renderSigInto("uForgeSig", { sighash: "" }); // 숨김
+    });
     return;
   }
 
   if (r.verified) {
-    box.innerHTML = `<div class="forge-verdict ok">예상과 달리 통과했습니다(본인 거래로 처리됨).</div>`;
+    sticky("uForge", () => {
+      box.innerHTML = `<div class="forge-verdict ok">${t("js.forgePassed")}</div>`;
+    });
     renderUtxoPool();
     return;
   }
 
-  box.innerHTML = `<div class="forge-verdict">
-    <b>🚫 도둑질 거부됨!</b> <b>${esc(attacker)}</b> 가 <b>${esc(victim)}</b> 의 ${fmtBtc(
-    amount
-  )} BTC를 가로채려 했지만, ${esc(victim)} 의 <b>개인키가 없어서</b> 자기 키로 서명할 수밖에 없었어요.
-    아래 <b>똑같은 1·2·3 검증 파이프라인</b>이 <b>③-(a)</b>에서 딱 걸리는 걸 보세요. 🔒
-  </div>`;
-  // 송금과 동일한 서명/검증 블록을 렌더 → ③(a) 주소 불일치로 실패하는 게 보임
-  renderSigInto("uForgeSig", r);
+  sticky("uForge", () => {
+    box.innerHTML = `<div class="forge-verdict">${t("js.forgeRejected", {
+      attacker: esc(attacker),
+      victim: esc(victim),
+      amt: fmtBtc(amount),
+    })}</div>`;
+    // 송금과 동일한 서명/검증 블록을 렌더 → ③(a) 주소 불일치로 실패하는 게 보임
+    renderSigInto("uForgeSig", r);
+  });
   // 검증 실패라 UTXO 상태는 그대로
 }
 
+function uLogClass(line) {
+  let cls = "mine";
+  if (line.includes("[거래]")) cls = "tx";
+  else if (line.includes("[위조 거부]")) cls = "reject";
+  else if (line.includes("[발행]") || line.includes("[지갑]")) cls = "init";
+  return `line ${cls}`;
+}
+
 function pullUtxoLogs() {
-  const logs = JSON.parse(utxo.take_logs());
-  const box = $("uConsole");
-  for (const line of logs) {
-    let cls = "mine";
-    if (line.includes("[거래]")) cls = "tx";
-    else if (line.includes("[위조 거부]")) cls = "reject";
-    else if (line.includes("[발행]") || line.includes("[지갑]")) cls = "init";
-    const div = document.createElement("div");
-    div.className = `line ${cls}`;
-    div.textContent = line;
-    box.appendChild(div);
-  }
-  box.scrollTop = box.scrollHeight;
+  appendEngineLogs("uConsole", JSON.parse(utxo.take_logs()), uLogClass);
 }
 
 // ============================================================
@@ -1533,7 +2072,7 @@ function buildMerkle() {
   const txs = anReadTxs();
   const info = $("anMkInfo");
   if (!txs.length) {
-    info.textContent = "거래를 한 줄에 하나씩 입력하세요.";
+    info.textContent = t("js.anNoTxs");
     $("anMerkle").innerHTML = "";
     $("anRootLine").style.display = "none";
     return;
@@ -1541,7 +2080,7 @@ function buildMerkle() {
   const mk = JSON.parse(merkle_tree(JSON.stringify(txs)));
   anLastRoot = mk.root;
   renderMerkle(mk);
-  info.textContent = `거래 ${mk.txCount}건 → 트리 ${mk.levels.length}층`;
+  info.textContent = t("js.anMkInfo", { n: mk.txCount, lv: mk.levels.length });
   $("anRoot").textContent = mk.root;
   $("anRootLine").style.display = "flex";
 }
@@ -1574,14 +2113,14 @@ function renderMerkle(mk) {
     // 홀수 개수(>1)인 자식 층은 마지막 노드를 복제해 짝을 맞춤 → 복제본을 흐리게 표시
     if (!isRoot && nodes.length > 1 && nodes.length % 2 === 1) {
       const last = nodes[nodes.length - 1];
-      chips += `<div class="mk-node dup" title="홀수라서 마지막 노드를 복제\n${esc(last)}">
+      chips += `<div class="mk-node dup" title="${esc(t("js.mkDupTip"))}\n${esc(last)}">
         <span class="mk-hash">${shortHash(last, 8)}</span>
-        <span class="mk-tag">복제</span>
+        <span class="mk-tag">${t("js.mkDupTag")}</span>
       </div>`;
     }
 
     html += `<div class="merkle-level ${isRoot ? "is-root" : ""}">${chips}</div>`;
-    if (i > 0) html += `<div class="merkle-connector">▲ 둘씩 이어붙여 double SHA-256</div>`;
+    if (i > 0) html += `<div class="merkle-connector">${t("js.mkConnector")}</div>`;
   }
   box.innerHTML = html;
 }
@@ -1589,7 +2128,7 @@ function renderMerkle(mk) {
 function assembleHeader() {
   const txs = anReadTxs();
   if (!txs.length) {
-    alert("먼저 ①에서 거래를 입력하세요.");
+    alert(t("js.anNeedTxs"));
     return;
   }
   // 머클트리도 현재 거래로 갱신
@@ -1609,15 +2148,17 @@ function assembleHeader() {
   $("anHeaderBox").style.display = "block";
   $("anMineCard").style.display = "block";
 
-  // 채굴 패널 초기화
-  $("anDStep0").textContent = "—";
-  $("anDStep1").textContent = "—";
-  $("anDStep2").textContent = "—";
-  $("anCmpHash").textContent = "—";
-  $("anCmpTarget").innerHTML = hlLeadingZeros(info.targetHex);
-  $("anCmpVerdict").className = "cmp-verdict";
-  $("anCmpVerdict").textContent = "아직 채굴 전 — ③ 채굴 시작을 눌러보세요";
-  $("anMineStat").textContent = "";
+  // 채굴 패널 초기화 (언어 전환 시에도 같은 상태로 다시 칠함)
+  sticky("anStep", () => {
+    $("anDStep0").textContent = "—";
+    $("anDStep1").textContent = "—";
+    $("anDStep2").textContent = "—";
+    $("anCmpHash").textContent = "—";
+    $("anCmpTarget").innerHTML = hlLeadingZeros(info.targetHex);
+    $("anCmpVerdict").className = "cmp-verdict";
+    $("anCmpVerdict").textContent = t("js.anIdleVerdict");
+    $("anMineStat").textContent = "";
+  });
   $("anMineBtn").disabled = false;
 }
 
@@ -1626,9 +2167,9 @@ function renderHeader(info) {
     { name: "version", size: "4 B", val: info.version, cls: "" },
     { name: "prev_hash", size: "32 B", val: info.prevHash, cls: "" },
     { name: "merkle_root", size: "32 B", val: info.merkleRoot, cls: "accent-merkle" },
-    { name: "timestamp", size: "4 B", val: `${info.timestamp} (${new Date(info.timestamp * 1000).toLocaleString()})`, cls: "" },
-    { name: "bits", size: "4 B", val: `선행 0비트 ${info.zeroBits}개 요구`, cls: "" },
-    { name: "nonce", size: "4 B", val: `${info.nonce}  (채굴이 바꾸는 값)`, cls: "accent-nonce" },
+    { name: "timestamp", size: "4 B", val: `${info.timestamp} (${new Date(info.timestamp * 1000).toLocaleString(uiLocale())})`, cls: "" },
+    { name: "bits", size: "4 B", val: t("js.hdrBits", { n: info.zeroBits }), cls: "" },
+    { name: "nonce", size: "4 B", val: `${info.nonce}  ${t("js.hdrNonce")}`, cls: "accent-nonce" },
   ];
   $("anHdrFields").innerHTML = fields
     .map(
@@ -1644,8 +2185,8 @@ function renderHeader(info) {
   $("anTargetHex").innerHTML = hlLeadingZeros(info.targetHex);
 
   const exp = info.expectedHashes;
-  const expStr = exp >= 1000 ? Math.round(exp).toLocaleString("en-US") : Math.round(exp).toString();
-  $("anExpected").textContent = `이 target을 만족하려면 평균 약 2^${info.zeroBits} ≈ ${expStr}번 해시해야 합니다.`;
+  const expStr = exp >= 1000 ? Math.round(exp).toLocaleString(uiLocale()) : Math.round(exp).toString();
+  $("anExpected").textContent = t("js.anExpected", { bits: info.zeroBits, n: expStr });
 }
 
 function startAnMine() {
@@ -1657,14 +2198,17 @@ function startAnMine() {
   const loop = () => {
     if (!anMining) return;
     const r = JSON.parse(anMiner.step(40000));
-    renderAnStep(r);
+    sticky("anStep", () => {
+      renderAnStep(r);
+      $("anMineStat").textContent = r.found
+        ? t("js.anFound", { nonce: fmtInt(r.nonce), n: fmtInt(r.attempts) })
+        : t("js.anTrying", { nonce: fmtInt(r.nonce) });
+    });
     if (r.found) {
       anMining = false;
       $("anStopBtn").disabled = true;
-      $("anMineStat").textContent = `🎉 발견! nonce=${fmtInt(r.nonce)} · 총 ${fmtInt(r.attempts)}번 해시`;
       return;
     }
-    $("anMineStat").textContent = `시도 중… nonce=${fmtInt(r.nonce)}`;
     anRaf = requestAnimationFrame(loop);
   };
   anRaf = requestAnimationFrame(loop);
@@ -1691,10 +2235,10 @@ function renderAnStep(r) {
   const v = $("anCmpVerdict");
   if (r.meets) {
     v.className = "cmp-verdict ok";
-    v.innerHTML = `✅ 블록해시 ≤ target — 조건 만족! 이 nonce가 정답입니다.`;
+    v.innerHTML = t("js.anMeets");
   } else {
     v.className = "cmp-verdict bad";
-    v.innerHTML = `블록해시 &gt; target — 아직 너무 큼. nonce를 바꿔 다시…`;
+    v.innerHTML = t("js.anNotMeets");
   }
 }
 
@@ -1731,7 +2275,7 @@ function netBuild() {
   const names = [];
   for (let i = 0; i < count; i++) names.push("Node " + String.fromCharCode(65 + i));
   netEngine = new WasmNetwork(JSON.stringify(names), diff);
-  $("netLog").innerHTML = "";
+  clearEngineLog("netLog");
   netApply(netEngine.snapshot());
 }
 
@@ -1770,13 +2314,13 @@ function renderNet() {
           const isTip = h === n.blocks.length - 1;
           let cls = b.isGenesis ? "nb-genesis" : agreed ? "nb-agreed" : "nb-fork";
           if (isTip && !b.isGenesis) cls += " nb-tip";
-          const label = b.isGenesis ? "제네시스" : `#${b.id}`;
+          const label = b.isGenesis ? t("js.genesisTag") : `#${b.id}`;
           const miner = b.isGenesis ? "" : `<span class="nb-miner">⛏ ${esc(b.miner)}</span>`;
           const tip = new Set(byHeight.get(h)).size > 1 && !b.isGenesis;
           return `<div class="net-block ${cls}" title="hash: ${esc(b.hash)}&#10;prev: ${esc(
             b.prevHash
           )}&#10;nonce: ${b.nonce}">
-            <span class="nb-id">${label}${tip ? ' <span class="nb-forktag">포크</span>' : ""}</span>
+            <span class="nb-id">${label}${tip ? ` <span class="nb-forktag">${t("js.forkTag")}</span>` : ""}</span>
             ${miner}
             <span class="nb-hash mono">${esc(b.hash.slice(0, 12))}…${copyBtn(b.hash)}</span>
           </div>`;
@@ -1786,10 +2330,10 @@ function renderNet() {
       return `<div class="net-node ${isLongest ? "is-longest" : ""}">
         <div class="net-node-head">
           <span class="net-node-name">${esc(n.name)}</span>
-          <span class="net-node-height">높이 ${n.height}${isLongest ? " · 👑 최장" : ""}</span>
+          <span class="net-node-height">${t("js.heightLbl", { h: n.height })}${isLongest ? t("js.longestTag") : ""}</span>
           <span class="net-node-actions">
-            <button class="btn sm" data-net="mine" data-idx="${idx}">⛏ 채굴</button>
-            <button class="btn sm green" data-net="bcast" data-idx="${idx}">📡 방송</button>
+            <button class="btn sm" data-net="mine" data-idx="${idx}">${t("js.mineBtn")}</button>
+            <button class="btn sm green" data-net="bcast" data-idx="${idx}">${t("js.bcastBtn")}</button>
           </span>
         </div>
         <div class="net-chain-scroll"><div class="net-chain">${blocks}</div></div>
@@ -1806,23 +2350,17 @@ function pullNetLogs() {
   } catch {
     return;
   }
-  const box = $("netLog");
-  logs.forEach((line) => {
-    const div = document.createElement("div");
-    div.className = "net-log-line " + netLogClass(line);
-    div.textContent = line;
-    box.appendChild(div);
-  });
-  box.scrollTop = box.scrollHeight;
+  appendEngineLogs("netLog", logs, netLogClass);
 }
 
 function netLogClass(line) {
-  if (line.includes("재구성") || line.includes("orphan")) return "lg-reorg";
-  if (line.includes("방송")) return "lg-cast";
-  if (line.includes("채굴")) return "lg-mine";
-  if (line.includes("포크")) return "lg-fork";
-  if (line.includes("거부") || line.includes("무효")) return "lg-bad";
-  return "";
+  let cls = "";
+  if (line.includes("재구성") || line.includes("orphan")) cls = "lg-reorg";
+  else if (line.includes("방송")) cls = "lg-cast";
+  else if (line.includes("채굴")) cls = "lg-mine";
+  else if (line.includes("포크")) cls = "lg-fork";
+  else if (line.includes("거부") || line.includes("무효")) cls = "lg-bad";
+  return "net-log-line " + cls;
 }
 
 // 포크 → 재구성(reorg)이 일어나는 전형적 시나리오를 자동으로 시연.
@@ -1927,30 +2465,26 @@ function renderDsCalc() {
 
   $("dsCalcOut").innerHTML = `
     <div class="ds-stat">
-      <span class="ds-stat-k">이론 성공 확률 (백서 공식)</span>
+      <span class="ds-stat-k">${t("js.calcTheo")}</span>
       <span class="ds-stat-v ${theo > 0.01 ? "bad" : "good"}">${fmtPct(theo)}</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">실험 성공률 (${fmtInt(trials)}회 몬테카를로)</span>
+      <span class="ds-stat-k">${t("js.calcExp", { n: fmtInt(trials) })}</span>
       <span class="ds-stat-v ${exp > 0.01 ? "bad" : "good"}">${fmtPct(exp)}</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">공격자 vs 정직한</span>
+      <span class="ds-stat-k">${t("js.calcRatio")}</span>
       <span class="ds-stat-v">${q}% : ${100 - q}%</span>
     </div>`;
 
   // 해석 배너
   let verdict;
   if (q >= 50) {
-    verdict = `<div class="ds-verdict warn">공격자가 <b>과반(${q}%)</b> → 이론상 <b>언젠가는</b> 성공(확률 100%). 하지만 뒤집으려는 블록이 깊을수록 필요한 <b>시간·전기가 폭발</b>합니다. 제네시스(약 90만 컨펌)는 물리적으로 불가능.</div>`;
+    verdict = `<div class="ds-verdict warn">${t("js.calcMajority", { q })}</div>`;
   } else if (theo < 0.0001) {
-    verdict = `<div class="ds-verdict good">공격자가 <b>${q}%</b>뿐이라, ${z}컨펌이면 성공 확률이 <b>${fmtPct(
-      theo
-    )}</b> — 사실상 불가능합니다. 컨펌이 깊어질수록 확률은 지수적으로 0에 수렴해요.</div>`;
+    verdict = `<div class="ds-verdict good">${t("js.calcTiny", { q, z, p: fmtPct(theo) })}</div>`;
   } else {
-    verdict = `<div class="ds-verdict warn">공격자가 <b>${q}%</b>일 때 ${z}컨펌 결제의 성공 확률은 <b>${fmtPct(
-      theo
-    )}</b>. 컨펌을 더 기다릴수록 이 확률은 급격히 떨어집니다.</div>`;
+    verdict = `<div class="ds-verdict warn">${t("js.calcSome", { q, z, p: fmtPct(theo) })}</div>`;
   }
   $("dsCalcVerdict").innerHTML = verdict;
 
@@ -1962,7 +2496,7 @@ function renderDsCalc() {
       const pct = pr * 100;
       const w = Math.max(pr <= 0 ? 0 : 1.5, pct); // 최소 폭으로 존재감 유지
       return `<div class="ds-decay-row">
-        <span class="ds-decay-z">${d}컨펌</span>
+        <span class="ds-decay-z">${t("js.confN", { n: d })}</span>
         <span class="ds-decay-bar"><span class="ds-decay-fill ${
           pr > 0.01 ? "hi" : "lo"
         }" style="width:${Math.min(100, w)}%"></span></span>
@@ -1975,9 +2509,9 @@ function renderDsCalc() {
 
 function dsBuild() {
   const diff = clampNum($("dsDifficulty").value, 1, 5, 3);
-  const conf = clampNum($("dsConf").value, 1, 6, 1);
+  const conf = clampNum($("dsConf").value, 1, 20, 1);
   dsEngine = new WasmDoubleSpend(diff, conf);
-  $("dsLog").innerHTML = "";
+  clearEngineLog("dsLog");
   dsApply(dsEngine.snapshot());
 }
 
@@ -1988,23 +2522,24 @@ function dsApply(json) {
 }
 
 const dsName = (n) =>
-  ({ Attacker: "공격자", Merchant: "판매자", Honest: "정직한채굴자" }[n] || n);
+  ({ Attacker: t("js.dsAttacker"), Merchant: t("js.dsMerchant"), Honest: t("js.dsHonest") }[n] || n);
 
 function dsBlockHTML(b, shared, lane) {
-  const label = b.isGenesis ? "제네시스" : `#${b.id}`;
+  const label = b.isGenesis ? t("js.genesisTag") : `#${b.id}`;
   const txsHtml = b.txs
-    .map((t) => {
-      if (t.isCoinbase)
-        return `<span class="ds-tx ds-tx-cb">⛏ 채굴보상 → ${esc(dsName(t.to))} +${fmtBtc(
-          t.amount
-        )}</span>`;
-      const isPay = t.from === "Attacker" && t.to === "Merchant";
-      const isFraud = t.from === "Attacker" && t.to === "Attacker";
+    .map((tx) => {
+      if (tx.isCoinbase)
+        return `<span class="ds-tx ds-tx-cb">${t("js.dsCoinbase", {
+          who: esc(dsName(tx.to)),
+          amt: fmtBtc(tx.amount),
+        })}</span>`;
+      const isPay = tx.from === "Attacker" && tx.to === "Merchant";
+      const isFraud = tx.from === "Attacker" && tx.to === "Attacker";
       const cls = isPay ? "ds-tx-pay" : isFraud ? "ds-tx-fraud" : "ds-tx-normal";
-      const tag = isPay ? "노트북 결제" : isFraud ? "이중지불(자기에게)" : "";
-      return `<span class="ds-tx ${cls}">${tag ? `<b>${tag}</b> ` : ""}${esc(dsName(t.from))}→${esc(
-        dsName(t.to)
-      )} ${fmtBtc(t.amount)}</span>`;
+      const tag = isPay ? t("js.dsPayTag") : isFraud ? t("js.dsFraudTag") : "";
+      return `<span class="ds-tx ${cls}">${tag ? `<b>${tag}</b> ` : ""}${esc(dsName(tx.from))}→${esc(
+        dsName(tx.to)
+      )} ${fmtBtc(tx.amount)}</span>`;
     })
     .join("");
   let cls = b.isGenesis ? "nb-genesis" : shared ? "nb-agreed" : lane === "pub" ? "ds-pub" : "ds-atk";
@@ -2025,7 +2560,7 @@ function renderDs() {
 
   const atkWrap = $("dsAttackerChain");
   if (!s.started) {
-    atkWrap.innerHTML = `<div class="ds-empty">아직 공격 시작 전 — <b>① 노트북 결제</b>를 누르면 공격자가 결제 직전에서 몰래 다른 체인을 파기 시작합니다.</div>`;
+    atkWrap.innerHTML = `<div class="ds-empty">${t("js.dsNotStarted")}</div>`;
   } else {
     atkWrap.innerHTML = s.attackerChain
       .map((b, i) => dsBlockHTML(b, i < fork, "atk"))
@@ -2034,9 +2569,9 @@ function renderDs() {
 
   $("dsAttackerSub").textContent = s.revealed
     ? s.attackWon
-      ? "공개됨 · 네트워크가 채택함(reorg)"
-      : "공개됨 · 너무 짧아 무시됨"
-    : "공개 전까지 아무도 모름";
+      ? t("js.dsRevealedWon")
+      : t("js.dsRevealedLost")
+    : t("ds.attackerLaneSub");
   $("dsAttackerLane").classList.toggle("revealed", s.revealed && s.attackWon);
 
   renderDsStatus(s);
@@ -2057,29 +2592,29 @@ function renderDsStatus(s) {
   if (s.revealed) {
     if (s.attackWon) {
       verdict = shipped
-        ? `<div class="ds-verdict bad">😈 공격 성공! 판매자는 노트북을 이미 발송했는데 결제가 사라졌습니다. 공격자는 노트북 + 코인을 모두 챙김.</div>`
-        : `<div class="ds-verdict warn">결제는 되돌려졌지만, 판매자가 아직 발송 전이라 실질 피해는 없습니다.</div>`;
+        ? `<div class="ds-verdict bad">${t("js.dsWonShipped")}</div>`
+        : `<div class="ds-verdict warn">${t("js.dsWonNotShipped")}</div>`;
     } else {
-      verdict = `<div class="ds-verdict good">✅ 공격 실패! 정직한 체인이 더 길어 결제가 그대로 확정됩니다.</div>`;
+      verdict = `<div class="ds-verdict good">${t("js.dsLost")}</div>`;
     }
   }
 
-  const raceTag = s.started && atkLen > pubLen ? ' <span class="ds-race">⚠️ 공격자 우세</span>' : "";
+  const raceTag = s.started && atkLen > pubLen ? ` <span class="ds-race">${t("js.dsRace")}</span>` : "";
   $("dsStatus").innerHTML = `
     <div class="ds-stat">
-      <span class="ds-stat-k">판매자가 받은 코인</span>
+      <span class="ds-stat-k">${t("js.dsStatCoins")}</span>
       <span class="ds-stat-v ${s.merchantBalance > 0 ? "good" : "bad"}">${fmtBtc(s.merchantBalance)} BTC</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">결제 확인(컨펌)</span>
+      <span class="ds-stat-k">${t("js.dsStatConf")}</span>
       <span class="ds-stat-v">${s.started ? s.confirmations : 0} / ${s.requiredConf}</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">노트북 발송</span>
-      <span class="ds-stat-v ${shipped ? "bad" : ""}">${shipped ? "📦 발송함 (되돌릴 수 없음)" : "대기 중"}</span>
+      <span class="ds-stat-k">${t("js.dsStatShip")}</span>
+      <span class="ds-stat-v ${shipped ? "bad" : ""}">${shipped ? t("js.dsShipped") : t("js.dsWaiting")}</span>
     </div>
     <div class="ds-stat">
-      <span class="ds-stat-k">체인 길이 · 공개 vs 공격자</span>
+      <span class="ds-stat-k">${t("js.dsStatLen")}</span>
       <span class="ds-stat-v">${pubLen} vs ${atkLen}${raceTag}</span>
     </div>
     ${verdict}`;
@@ -2093,23 +2628,17 @@ function pullDsLogs() {
   } catch {
     return;
   }
-  const box = $("dsLog");
-  logs.forEach((line) => {
-    const div = document.createElement("div");
-    div.className = "net-log-line " + dsLogClass(line);
-    div.textContent = line;
-    box.appendChild(div);
-  });
-  box.scrollTop = box.scrollHeight;
+  appendEngineLogs("dsLog", logs, dsLogClass);
 }
 
 function dsLogClass(line) {
-  if (line.includes("공격 성공") || line.includes("재구성")) return "lg-reorg";
-  if (line.includes("공격 실패")) return "lg-good";
-  if (line.includes("공격자")) return "lg-fork";
-  if (line.includes("판매자") || line.includes("결제")) return "lg-cast";
-  if (line.includes("무시") || line.includes("안내")) return "lg-bad";
-  return "";
+  let cls = "";
+  if (line.includes("공격 성공") || line.includes("재구성")) cls = "lg-reorg";
+  else if (line.includes("공격 실패")) cls = "lg-good";
+  else if (line.includes("공격자")) cls = "lg-fork";
+  else if (line.includes("판매자") || line.includes("결제")) cls = "lg-cast";
+  else if (line.includes("무시") || line.includes("안내")) cls = "lg-bad";
+  return "net-log-line " + cls;
 }
 
 // 공격이 성공하는 전형적 흐름을 자동으로 재생.

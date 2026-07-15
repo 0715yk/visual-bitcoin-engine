@@ -60,7 +60,7 @@ impl DoubleSpend {
         let mut ds = DoubleSpend {
             difficulty: diff,
             reward: 50.0,
-            required_conf: required_conf.clamp(1, 6),
+            required_conf: required_conf.clamp(1, 20),
             public_chain: vec![genesis.clone()],
             attacker_chain: vec![genesis],
             fork_len: 0,

@@ -88,8 +88,88 @@ header.masthead {
   font-size: 13.5px;
 }
 
-.engine-badge {
+.masthead-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lang-picker { position: relative; }
+
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s;
+}
+.lang-btn:hover { border-color: var(--btc); }
+.lang-btn:focus-visible { outline: none; border-color: var(--btc); box-shadow: 0 0 0 2px rgba(247,147,26,.25); }
+.lang-btn .lang-globe { font-size: 14px; line-height: 1; }
+.lang-btn .lang-caret { font-size: 10px; color: var(--muted); transition: transform .15s; }
+.lang-btn[aria-expanded="true"] .lang-caret { transform: rotate(180deg); }
+.lang-btn[aria-expanded="true"] { border-color: var(--btc); }
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  min-width: 160px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .5), 0 0 0 1px rgba(247, 147, 26, .06);
+  animation: langMenuIn .13s ease-out;
+}
+@keyframes langMenuIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lang-menu li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .1s;
+}
+.lang-menu li:hover { background: var(--bg-soft); }
+.lang-menu li .lang-flag { font-size: 15px; line-height: 1; }
+.lang-menu li[aria-selected="true"] {
+  background: rgba(247, 147, 26, .12);
+  color: var(--btc);
+  font-weight: 600;
+}
+.lang-menu li[aria-selected="true"]::after {
+  content: "✓";
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--btc);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.engine-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -799,11 +879,14 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 /* ============ Phase 3: 블록 해부 (탭 5) ============ */
 textarea {
   width: 100%; box-sizing: border-box; resize: vertical;
+  min-height: 90px;
   background: var(--panel); color: var(--text);
   border: 1px solid var(--border); border-radius: 10px;
   padding: 11px 13px; font-family: var(--mono); font-size: 13px; line-height: 1.6;
 }
 textarea:focus { outline: none; border-color: var(--btc); }
+/* 네이티브 리사이즈 그립을 테마색 삼각형으로 (WebKit) */
+textarea::-webkit-resizer { background: transparent; }
 
 /* 머클트리 */
 .merkle-scroll { overflow-x: auto; padding: 6px 2px; }
@@ -1035,3 +1118,242 @@ button.btn.sm.green { background: linear-gradient(145deg, #3fb950, #2ea043); bor
 .ds-decay-val { font-size: 12px; font-family: var(--mono); color: var(--text); }
 
 input[type="range"] { accent-color: var(--btc); width: 100%; }
+
+/* ============================================================
+   8번 탭: 양자컴퓨터 위협
+   ============================================================ */
+.q-badge { font-size: 10.5px; font-weight: 800; border-radius: 6px; padding: 1px 7px; vertical-align: middle; }
+.q-badge.crit { color: #ff8983; background: rgba(248,81,73,.15); border: 1px solid rgba(248,81,73,.5); }
+.q-badge.mid { color: #ffb454; background: rgba(247,147,26,.13); border: 1px solid rgba(247,147,26,.5); }
+.q-badge.low { color: #6ee787; background: rgba(63,185,80,.13); border: 1px solid rgba(63,185,80,.45); }
+
+.q-list { margin: 0; padding-left: 20px; }
+.q-list li { margin: 6px 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
+.q-list li b { color: var(--text); }
+
+.q-algo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.q-algo { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg-soft); }
+.q-algo.crit { border-color: rgba(248,81,73,.4); }
+.q-algo.mid { border-color: rgba(247,147,26,.4); }
+.q-algo-h { font-weight: 800; font-size: 15px; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+.q-case-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.q-case { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg-soft); }
+.q-case.crit { border-left: 4px solid var(--red); }
+.q-case.mid { border-left: 4px solid var(--btc); }
+.q-case.low { border-left: 4px solid var(--green); }
+.q-case-h { font-weight: 800; font-size: 14.5px; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.q-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; }
+.q-case-b > div { font-size: 13px; color: var(--muted); line-height: 1.55; margin: 6px 0; }
+.q-case-b b { color: var(--text); }
+.q-k { display: inline-block; min-width: 52px; font-size: 11px; font-weight: 700; color: var(--btc-soft); margin-right: 6px; }
+
+.q-safe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 4px; }
+.q-safe { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.q-safe.ok { background: rgba(63,185,80,.06); border-color: rgba(63,185,80,.4); }
+.q-safe.bad { background: rgba(248,81,73,.06); border-color: rgba(248,81,73,.4); }
+.q-safe-h { font-weight: 800; font-size: 14px; color: var(--text); margin-bottom: 10px; }
+
+.q-feas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.q-feas { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg-soft); }
+.q-feas-k { font-size: 12px; font-weight: 700; color: var(--btc-soft); margin-bottom: 8px; }
+.q-feas-v { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.5; }
+.q-feas-v .muted { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+
+.q-fix-list { margin: 0 0 14px; padding-left: 20px; }
+.q-fix-list li { margin: 8px 0; font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+.q-fix-list li b { color: var(--text); }
+
+/* ============================================================
+   커스텀 컨트롤 UI — 브라우저 기본 UI 대체
+   (스크롤바 · 숫자 스테퍼 · 레인지 · 커스텀 셀렉트)
+   ============================================================ */
+
+/* ---------- 스크롤바 (전역: Firefox) ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ---------- 스크롤바 (WebKit/Blink: Chrome·Edge·Safari) ---------- */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #3a465b; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:active { background: var(--btc); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* 로그 콘솔·코드 영역처럼 어두운 패널은 트랙을 살짝 어둡게, 썸을 얇게 */
+.console::-webkit-scrollbar,
+.net-log::-webkit-scrollbar,
+textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+.console, .net-log, textarea { scrollbar-width: thin; }
+
+/* 가로 스크롤 영역(머클트리·네트워크 체인·곡선)엔 얇은 스크롤바 */
+.merkle-scroll::-webkit-scrollbar,
+.net-chain-scroll::-webkit-scrollbar,
+.curve-wrap::-webkit-scrollbar { height: 9px; }
+
+/* ---------- 숫자 input 커스텀 스테퍼 ---------- */
+/* 네이티브 스핀 버튼 제거 (WebKit / Firefox) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* JS가 감싸는 래퍼: 입력폭은 유지하고 오른쪽에 세로 −/+ 스테퍼를 얹는다 */
+.num-wrap { position: relative; display: inline-flex; align-items: stretch; max-width: 100%; }
+.num-wrap > input[type="number"] { padding-right: 30px; }
+.num-stepper {
+  position: absolute;
+  top: 1px; right: 1px; bottom: 1px;
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
+}
+.num-wrap:focus-within .num-stepper { border-left-color: var(--btc); }
+.num-step {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1;
+  padding: 0;
+  transition: background .12s, color .12s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.num-step:hover { background: var(--btc); color: #1a1206; }
+.num-step:active { background: var(--btc-soft); }
+.num-step.up { border-bottom: 1px solid var(--border); }
+.num-step:disabled { opacity: .35; cursor: not-allowed; background: var(--panel-2); color: var(--muted); }
+.num-step .caret { pointer-events: none; }
+
+/* ---------- range input (크로스브라우저 커스텀) ---------- */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+/* 트랙 — WebKit */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+/* 썸 — WebKit */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--btc);
+  border: 2px solid #1a1206;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  transition: transform .1s, box-shadow .12s;
+}
+input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+input[type="range"]:active::-webkit-slider-thumb { box-shadow: 0 0 0 6px rgba(247,147,26,.2); }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(247,147,26,.35); }
+/* 트랙 — Firefox */
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(247,147,26,.55);
+}
+/* 썸 — Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--btc);
+  border: 2px solid #1a1206;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(247,147,26,.35); }
+
+/* ---------- 커스텀 셀렉트 (네이티브 <select> 대체) ---------- */
+/* 원본 <select>는 접근성/폼 값 유지를 위해 숨겨두고 유지한다 */
+.cs-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cs-select { position: relative; display: inline-block; min-width: 130px; }
+.cs-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s;
+}
+.cs-trigger:hover { border-color: var(--btc); }
+.cs-trigger:focus-visible { outline: none; border-color: var(--btc); box-shadow: 0 0 0 2px rgba(247,147,26,.25); }
+.cs-trigger[aria-expanded="true"] { border-color: var(--btc); }
+.cs-trigger .cs-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-trigger .cs-caret { font-size: 10px; color: var(--muted); transition: transform .15s; }
+.cs-trigger[aria-expanded="true"] .cs-caret { transform: rotate(180deg); }
+
+.cs-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  min-width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(247,147,26,.06);
+  animation: csMenuIn .13s ease-out;
+}
+.cs-menu[hidden] { display: none; }
+@keyframes csMenuIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+.cs-menu li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .1s;
+}
+.cs-menu li:hover, .cs-menu li.cs-active { background: var(--bg-soft); }
+.cs-menu li[aria-selected="true"] { background: rgba(247,147,26,.12); color: var(--btc); font-weight: 600; }
+.cs-menu li[aria-selected="true"]::after { content: "✓"; margin-left: auto; font-size: 12px; color: var(--btc); }

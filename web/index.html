@@ -3,7 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visual Bitcoin Engine — 비트코인 원리 시뮬레이터</title>
+
+  <!-- ============================================================
+       SEO / 소셜 공유 메타
+       ⚠️ 배포 도메인이 정해지면 아래 SITE_URL(placeholder)만 실제 주소로 바꾸세요.
+          (canonical, og:url, og:image, hreflang, sitemap.xml, robots.txt 모두 동일 도메인 기준)
+       ============================================================ -->
+  <title data-i18n="meta.title">Visual Bitcoin Engine — 비트코인 원리 인터랙티브 시뮬레이터</title>
+  <meta name="description" data-i18n-attr="content:meta.description" content="Rust와 WebAssembly로 만든 인터랙티브 비트코인 학습 도구. SHA-256 해시, 채굴(작업증명), UTXO, 디지털 서명, 블록체인, P2P 합의, 이중지불·양자컴퓨터 위협까지 직접 만져보며 배웁니다." />
+  <meta name="keywords" data-i18n-attr="content:meta.keywords" content="비트코인, 블록체인, 비트코인 원리, SHA-256, 작업증명, 채굴, UTXO, 디지털 서명, 이중지불, 양자컴퓨터, 암호화폐, 시뮬레이터, WebAssembly, Rust" />
+  <meta name="author" content="Visual Bitcoin Engine" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0b0e14" />
+  <link rel="canonical" href="https://visual-bitcoin-engine.example/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Visual Bitcoin Engine" />
+  <meta property="og:title" data-i18n-attr="content:meta.ogTitle" content="Visual Bitcoin Engine — 비트코인이 어떻게 작동하는지 직접 만져보는 시뮬레이터" />
+  <meta property="og:description" data-i18n-attr="content:meta.description" content="Rust와 WebAssembly로 만든 인터랙티브 비트코인 학습 도구. 해시·채굴·서명·블록체인·합의·공격까지 눈으로 배웁니다." />
+  <meta property="og:url" content="https://visual-bitcoin-engine.example/" />
+  <meta property="og:image" content="https://visual-bitcoin-engine.example/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:locale:alternate" content="ja_JP" />
+  <meta property="og:locale:alternate" content="es_ES" />
+  <meta property="og:locale:alternate" content="fr_FR" />
+  <meta property="og:locale:alternate" content="de_DE" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" data-i18n-attr="content:meta.ogTitle" content="Visual Bitcoin Engine — 비트코인 원리 인터랙티브 시뮬레이터" />
+  <meta name="twitter:description" data-i18n-attr="content:meta.description" content="해시·채굴·서명·블록체인·합의·공격까지 직접 만져보며 배우는 비트코인 학습 도구." />
+  <meta name="twitter:image" content="https://visual-bitcoin-engine.example/assets/og-image.png" />
+
+  <!-- hreflang: 검색엔진에 언어별 대체 URL 안내 (단일 URL + ?lang= 방식) -->
+  <link rel="alternate" hreflang="ko" href="https://visual-bitcoin-engine.example/?lang=ko" />
+  <link rel="alternate" hreflang="en" href="https://visual-bitcoin-engine.example/?lang=en" />
+  <link rel="alternate" hreflang="ja" href="https://visual-bitcoin-engine.example/?lang=ja" />
+  <link rel="alternate" hreflang="es" href="https://visual-bitcoin-engine.example/?lang=es" />
+  <link rel="alternate" hreflang="fr" href="https://visual-bitcoin-engine.example/?lang=fr" />
+  <link rel="alternate" hreflang="de" href="https://visual-bitcoin-engine.example/?lang=de" />
+  <link rel="alternate" hreflang="x-default" href="https://visual-bitcoin-engine.example/" />
+
+  <!-- 파비콘 / PWA -->
+  <link rel="icon" href="./assets/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png" />
+  <link rel="manifest" href="./site.webmanifest" />
+
+  <!-- 구조화 데이터(JSON-LD): 검색결과 리치 스니펫 -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Visual Bitcoin Engine",
+    "url": "https://visual-bitcoin-engine.example/",
+    "description": "Interactive Bitcoin learning tool built with Rust and WebAssembly. Explore SHA-256 hashing, proof-of-work mining, UTXO, digital signatures, blockchain, P2P consensus, double-spend and quantum-computer threats.",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Any (Web browser)",
+    "inLanguage": ["ko", "en", "ja", "es", "fr", "de"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Organization", "name": "Visual Bitcoin Engine" }
+  }
+  </script>
+
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -11,25 +78,43 @@
     <!-- ============ 헤더 ============ -->
     <header class="masthead">
       <div class="logo">₿</div>
-      <div>
+      <div class="masthead-text">
         <h1>Visual Bitcoin Engine</h1>
-        <p>Rust로 만든 비트코인 엔진을 <b>WebAssembly</b>로 컴파일해 브라우저에서 직접 돌려보는 학습 도구</p>
+        <p data-i18n="header.tagline">Rust로 만든 비트코인 엔진을 <b>WebAssembly</b>로 컴파일해 브라우저에서 직접 돌려보는 학습 도구</p>
+      </div>
+      <div class="masthead-right">
+        <div class="lang-picker" id="langPicker">
+          <button type="button" class="lang-btn" id="langBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language">
+            <span class="lang-globe">🌐</span>
+            <span id="langBtnLabel">한국어</span>
+            <span class="lang-caret">▾</span>
+          </button>
+          <ul class="lang-menu" id="langMenu" role="listbox" hidden>
+            <li role="option" data-lang="ko"><span class="lang-flag">🇰🇷</span>한국어</li>
+            <li role="option" data-lang="en"><span class="lang-flag">🇺🇸</span>English</li>
+            <li role="option" data-lang="ja"><span class="lang-flag">🇯🇵</span>日本語</li>
+            <li role="option" data-lang="es"><span class="lang-flag">🇪🇸</span>Español</li>
+            <li role="option" data-lang="fr"><span class="lang-flag">🇫🇷</span>Français</li>
+            <li role="option" data-lang="de"><span class="lang-flag">🇩🇪</span>Deutsch</li>
+          </ul>
       </div>
       <div class="engine-badge" id="engineBadge">
-        <span class="dot"></span><span id="engineStatus">엔진 로딩 중…</span>
+          <span class="dot"></span><span id="engineStatus" data-i18n="header.engineLoading">엔진 로딩 중…</span>
+        </div>
       </div>
     </header>
 
     <!-- ============ 탭 ============ -->
     <nav class="tabs" id="tabs">
-      <button class="tab-btn active" data-tab="overview">둘러보기</button>
-      <button class="tab-btn" data-tab="sha">1 · SHA-256 해시</button>
-      <button class="tab-btn" data-tab="mining">2 · 채굴 실험실 (PoW)</button>
-      <button class="tab-btn" data-tab="chain">3 · 블록체인 시뮬레이터</button>
-      <button class="tab-btn" data-tab="utxo">4 · UTXO 모델</button>
-      <button class="tab-btn" data-tab="anatomy">5 · 블록 해부</button>
-      <button class="tab-btn" data-tab="network">6 · 노드 합의 (P2P)</button>
-      <button class="tab-btn" data-tab="attack">7 · 이중지불 공격</button>
+      <button class="tab-btn active" data-tab="overview" data-i18n="tabs.overview">둘러보기</button>
+      <button class="tab-btn" data-tab="sha" data-i18n="tabs.sha">1 · SHA-256 해시</button>
+      <button class="tab-btn" data-tab="mining" data-i18n="tabs.mining">2 · 채굴 실험실 (PoW)</button>
+      <button class="tab-btn" data-tab="chain" data-i18n="tabs.chain">3 · 블록체인 시뮬레이터</button>
+      <button class="tab-btn" data-tab="utxo" data-i18n="tabs.utxo">4 · UTXO 모델</button>
+      <button class="tab-btn" data-tab="anatomy" data-i18n="tabs.anatomy">5 · 블록 해부</button>
+      <button class="tab-btn" data-tab="network" data-i18n="tabs.network">6 · 노드 합의 (P2P)</button>
+      <button class="tab-btn" data-tab="attack" data-i18n="tabs.attack">7 · 이중지불 공격</button>
+      <button class="tab-btn" data-tab="quantum" data-i18n="tabs.quantum">8 · 양자컴퓨터 위협</button>
     </nav>
 
     <!-- ============================================================
@@ -37,37 +122,43 @@
          ============================================================ -->
     <section class="tab-panel active" id="tab-overview">
       <div class="card">
-        <h2>비트코인은 결국 "해시로 연결된 거래 장부"예요</h2>
-        <p class="lead">아래 5개 부품이 어떻게 맞물리는지 차례대로 직접 만져보면, "비트코인이 왜 위조가 안 되는가"가 손에 잡혀요.</p>
+        <h2 data-i18n="ov.h1">비트코인은 결국 "해시로 연결된 거래 장부"예요</h2>
+        <p class="lead" data-i18n="ov.lead">아래 6개 부품이 어떻게 맞물리는지 차례대로 직접 만져보면, "비트코인이 왜 위조가 안 되는가, 주인 없이도 왜 돌아가는가"가 손에 잡혀요.</p>
         <div class="flow">
-          <div class="node"><div class="n">부품 1</div><div class="t">SHA-256 해시</div><div class="d">어떤 데이터든 64자리 지문으로. 되돌릴 수 없음(단방향).</div></div>
-          <div class="node"><div class="n">부품 2</div><div class="t">블록</div><div class="d">거래 묶음 + 이전 블록의 해시 + nonce.</div></div>
-          <div class="node"><div class="n">부품 3</div><div class="t">채굴 (PoW)</div><div class="d">해시가 0으로 시작하게 만드는 nonce 찾기 = 일(work).</div></div>
-          <div class="node"><div class="n">부품 4</div><div class="t">거래 · 잔액</div><div class="d">없는 돈은 못 보냄. 이중지불 방지.</div></div>
-          <div class="node"><div class="n">부품 5</div><div class="t">검증 · 위변조</div><div class="d">한 글자만 바꿔도 모든 해시가 깨짐.</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part1n">부품 1</div><div class="t" data-i18n="ov.part1t">SHA-256 해시</div><div class="d" data-i18n="ov.part1d">어떤 데이터든 64자리 지문으로. 되돌릴 수 없음(단방향).</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part2n">부품 2</div><div class="t" data-i18n="ov.part2t">블록 · 체인</div><div class="d" data-i18n="ov.part2d">거래 묶음 + 이전 블록의 해시 + nonce. 해시로 줄줄이 연결.</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part3n">부품 3</div><div class="t" data-i18n="ov.part3t">채굴 (PoW)</div><div class="d" data-i18n="ov.part3d">해시가 0으로 시작하게 만드는 nonce 찾기 = 일(work).</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part4n">부품 4</div><div class="t" data-i18n="ov.part4t">UTXO · 디지털 서명</div><div class="d" data-i18n="ov.part4d">동전은 주소에 잠기고, 개인키 서명(ECDSA)으로만 풀림.</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part5n">부품 5</div><div class="t" data-i18n="ov.part5t">P2P 합의</div><div class="d" data-i18n="ov.part5d">수천 개 노드가 "가장 긴 체인" 규칙 하나로 장부를 맞춤.</div></div>
+          <div class="node"><div class="n" data-i18n="ov.part6n">부품 6</div><div class="t" data-i18n="ov.part6t">공격과 방어</div><div class="d" data-i18n="ov.part6d">이중지불 · 51% · 양자컴 — 왜 뚫기 어려운지까지 직접 실험.</div></div>
         </div>
       </div>
 
       <div class="grid cols-2">
         <div class="card">
-          <h3>여기서 진짜로 돌아가는 것</h3>
+          <h3 data-i18n="ov.realH">여기서 진짜로 돌아가는 것</h3>
           <ul class="tight">
-            <li>화면의 모든 계산(<b>SHA-256, 채굴, 잔액 검증, 체인 검증</b>)은 <code class="mono">src/</code> 의 <b>Rust 엔진</b>이 합니다.</li>
-            <li>그 Rust 코드를 <b>WebAssembly(.wasm)</b> 로 컴파일해서 브라우저 안에서 실행해요. JavaScript는 그림만 그립니다.</li>
-            <li>즉, CLI에서 <code class="mono">cargo run</code> 으로 돌던 그 엔진이 <b>그대로</b> 웹에서 돕니다.</li>
+            <li data-i18n="ov.real1">화면의 모든 계산(<b>SHA-256, 채굴, ECDSA 서명·검증, P2P 합의, 공격 시뮬레이션</b>)은 <code class="mono">src/</code> 의 <b>Rust 엔진</b>이 합니다.</li>
+            <li data-i18n="ov.real2">그 Rust 코드를 <b>WebAssembly(.wasm)</b> 로 컴파일해서 브라우저 안에서 실행해요. JavaScript는 그림만 그립니다.</li>
+            <li data-i18n="ov.real3">즉, CLI에서 <code class="mono">cargo run</code> 으로 돌던 그 엔진이 <b>그대로</b> 웹에서 돕니다.</li>
           </ul>
-          <div class="callout why">
+          <div class="callout why" data-i18n="ov.whyWasm">
             <b>왜 WASM인가?</b> 브라우저는 Rust를 바로 못 돌리고 JS/WASM만 실행해요. Rust→WASM으로 컴파일하면 "진짜 엔진"을 웹에서 그대로 쓸 수 있습니다.
           </div>
+          <div class="callout" data-i18n="ov.srcNote">소스 구조: <code class="mono">block.rs</code>(해시·채굴) · <code class="mono">transaction.rs</code>(거래) · <code class="mono">blockchain.rs</code>(체인·잔액·검증) · <code class="mono">utxo.rs</code>(UTXO·입력별 서명) · <code class="mono">wallet.rs</code>(키·ECDSA) · <code class="mono">merkle.rs</code>(머클트리) · <code class="mono">header.rs</code>(80B 헤더) · <code class="mono">network.rs</code>(P2P 합의) · <code class="mono">attack.rs</code>(이중지불) · <code class="mono">wasm_api.rs</code>(브라우저 다리)</div>
         </div>
         <div class="card">
-          <h3>추천 학습 순서</h3>
+          <h3 data-i18n="ov.orderH">추천 학습 순서</h3>
           <ul class="tight">
-            <li><b>1 · SHA-256</b> — 글자 하나만 바꿔도 지문이 완전히 달라지는 걸 눈으로 보기 (눈사태 효과).</li>
-            <li><b>2 · 채굴 실험실</b> — 난이도를 올리면 왜 채굴이 기하급수적으로 어려워지는지 체감.</li>
-            <li><b>3 · 블록체인 시뮬레이터</b> — 거래를 만들고 블록을 채굴해 체인을 키운 뒤, 블록을 몰래 조작해 보고 검증으로 잡아내기.</li>
+            <li data-i18n="ov.order1"><b>1 · SHA-256</b> — 글자 하나만 바꿔도 지문이 완전히 달라지는 걸 눈으로 보기 (눈사태 효과).</li>
+            <li data-i18n="ov.order2"><b>2 · 채굴 실험실</b> — 난이도를 올리면 왜 채굴이 기하급수적으로 어려워지는지 체감.</li>
+            <li data-i18n="ov.order3"><b>3 · 블록체인 시뮬레이터</b> — 거래 → 채굴 → 몰래 조작 → 검증으로 잡아내기까지 한 사이클.</li>
+            <li data-i18n="ov.order4"><b>4 · UTXO 모델</b> — 동전(UTXO) · 주소 · 개인키 서명으로 "내 돈"이 증명되는 원리.</li>
+            <li data-i18n="ov.order5"><b>5 · 블록 해부</b> — 80바이트 헤더 · 머클루트를 실제 hex 단위까지 뜯어보기.</li>
+            <li data-i18n="ov.order6"><b>6 · 노드 합의 (P2P)</b> — 여러 노드 · 포크 · 재구성(reorg)으로 장부가 하나로 수렴하는 과정.</li>
+            <li data-i18n="ov.order7"><b>7 · 이중지불 공격</b> — 51% 공격을 직접 실행해 보고, 성공 확률까지 계산.</li>
+            <li data-i18n="ov.order8"><b>8 · 양자컴퓨터 위협</b> — 쇼어 vs 그로버, 뭐가 진짜 위험하고 뭐가 과장인지 총정리.</li>
           </ul>
-          <div class="callout">소스 구조: <code class="mono">block.rs</code>(해시·채굴) · <code class="mono">transaction.rs</code>(거래) · <code class="mono">blockchain.rs</code>(체인·잔액·검증) · <code class="mono">config.rs</code>(설정) · <code class="mono">wasm_api.rs</code>(브라우저 다리)</div>
         </div>
       </div>
     </section>
@@ -77,43 +168,43 @@
          ============================================================ -->
     <section class="tab-panel" id="tab-sha">
       <div class="card">
-        <h2>SHA-256 — 모든 것의 출발점</h2>
-        <p class="lead">아무 글자나 입력해 보세요. 입력이 1바이트든 1메가든, 결과는 <b>항상 64자리 16진수(256비트)</b>입니다.</p>
-        <label class="field">입력 (원하는 대로 바꿔보세요)
+        <h2 data-i18n="sha.h1">SHA-256 — 모든 것의 출발점</h2>
+        <p class="lead" data-i18n="sha.lead">아무 글자나 입력해 보세요. 입력이 1바이트든 1메가든, 결과는 <b>항상 64자리 16진수(256비트)</b>입니다.</p>
+        <label class="field"><span data-i18n="sha.inputLabel">입력 (원하는 대로 바꿔보세요)</span>
           <input id="shaInput" value="bitcoin" />
         </label>
-        <h3>SHA-256 해시 결과</h3>
+        <h3 data-i18n="sha.resultH">SHA-256 해시 결과</h3>
         <div class="hash" id="shaOutput"></div>
         <div class="row small muted" style="margin-top:10px">
-          <span>길이: <b id="shaLen" class="mono">—</b> 자 (16진수)</span>
-          <span>= <b class="mono">256</b> 비트</span>
+          <span data-i18n="sha.lenLabel">길이: <b id="shaLen" class="mono">—</b> 자 (16진수)</span>
+          <span data-i18n="sha.bits">= <b class="mono">256</b> 비트</span>
         </div>
-        <div class="callout why">
+        <div class="callout why" data-i18n="sha.oneway">
           <b>단방향(one-way):</b> 해시에서 원본을 역으로 계산하는 공식은 존재하지 않아요. 스크램블한 계란을 다시 못 되돌리는 것과 같습니다. 비트코인 보안의 토대죠.
         </div>
       </div>
 
       <div class="card">
-        <h2>눈사태 효과 (Avalanche Effect)</h2>
-        <p class="lead">한 글자만 바꿔도 결과의 절반 가까운 비트가 뒤집힙니다. 두 입력을 비교해 보세요.</p>
+        <h2 data-i18n="sha.avH">눈사태 효과 (Avalanche Effect)</h2>
+        <p class="lead" data-i18n="sha.avLead">한 글자만 바꿔도 결과의 절반 가까운 비트가 뒤집힙니다. 두 입력을 비교해 보세요.</p>
         <div class="grid cols-2">
-          <label class="field">입력 A
+          <label class="field"><span data-i18n="sha.inputA">입력 A</span>
             <input id="avA" value="hello" />
           </label>
-          <label class="field">입력 B
+          <label class="field"><span data-i18n="sha.inputB">입력 B</span>
             <input id="avB" value="hello!" />
           </label>
         </div>
-        <h3>해시 A</h3>
+        <h3 data-i18n="sha.hashA">해시 A</h3>
         <div class="hash" id="avHashA"></div>
-        <h3>해시 B <span class="small muted">(A와 다른 자리는 빨간색)</span></h3>
+        <h3 data-i18n="sha.hashB">해시 B <span class="small muted">(A와 다른 자리는 빨간색)</span></h3>
         <div class="hash" id="avHashB"></div>
         <div class="row" style="margin-top:12px; align-items:center;">
           <div class="stat blue" style="max-width:220px">
-            <div class="k">다른 16진수 자릿수</div>
+            <div class="k" data-i18n="sha.diffK">다른 16진수 자릿수</div>
             <div class="v"><span id="avDiffCount">0</span><small> / 64</small></div>
           </div>
-          <div class="callout" style="flex:1; margin:0;">
+          <div class="callout" style="flex:1; margin:0;" data-i18n="sha.avNote">
             입력은 <span class="mono" id="avDelta">한 글자</span>밖에 안 다른데 해시는 거의 무작위로 달라지죠. 그래서 블록 안의 거래를 살짝만 고쳐도 해시가 완전히 어긋나 <b>즉시 들통</b>납니다.
           </div>
         </div>
@@ -121,28 +212,28 @@
 
       <!-- ============ 그래서 이 해시로 뭘 하나: 블록 연결 ============ -->
       <div class="card">
-        <h2>그래서 이걸로 뭘 하냐면 — 블록과 블록을 "해시로" 잇습니다</h2>
-        <p class="lead">
+        <h2 data-i18n="sha.chainH">그래서 이걸로 뭘 하냐면 — 블록과 블록을 "해시로" 잇습니다</h2>
+        <p class="lead" data-i18n="sha.chainLead">
           비트코인의 핵심 아이디어예요. 각 블록은 <b>자기 데이터</b>뿐 아니라 <b>바로 앞 블록의 해시</b>까지 함께 SHA-256에 넣습니다.
           그래서 블록들이 사슬(chain)처럼 이어져요 — 이게 <b>블록체인</b>이라는 이름의 유래죠.
         </p>
-        <div class="callout why">
+        <div class="callout why" data-i18n="sha.chainFormula">
           <b>계산식:</b> <span class="mono">이 블록 해시 = SHA-256( 이전 블록 해시 + 데이터 + nonce )</span>
           <br>맨 앞(제네시스) 블록은 앞이 없으니 이전 해시를 <span class="mono">0000…</span> 으로 둡니다.
           <br><b>nonce</b>는 채굴자가 바꾸는 숫자예요. <b>⛏ 채굴</b> 버튼을 누르면 <b>해시 앞이 0으로 시작</b>할 때까지 nonce를 자동으로 찾습니다(= 탭 2에서 본 그 작업증명).
           <br>이렇게 찾은 nonce는 앞서 말한 대로 그 <b>블록 해시를 확정</b>하는 데 쓰여요. 그래서 데이터를 하나라도 <b>조작하면 → 블록 해시가 바뀌고 → 그 블록을 기점으로 뒤의 모든 블록을 다시 채굴</b>(nonce 다시 찾기)해야 합니다. <b>이게 조작이 어려운 이유예요.</b> 아래에서 직접 확인해 보세요. 👇
         </div>
-        <p class="lead small" style="margin-bottom:8px">👉 아래 블록의 <b>데이터를 고치거나 ⛏ 채굴을 눌러보세요.</b> 그 블록 해시가 바뀌면, 그걸 품고 있던 <b>뒤 블록들의 해시가 줄줄이 다시 계산</b>돼요(주황색 반짝임). 채굴해둔 뒤 블록이 있었다면 <b>0으로 시작하던 게 깨지는 것</b>도 보입니다.</p>
+        <p class="lead small" style="margin-bottom:8px" data-i18n="sha.chainTry">👉 아래 블록의 <b>데이터를 고치거나 ⛏ 채굴을 눌러보세요.</b> 그 블록 해시가 바뀌면, 그걸 품고 있던 <b>뒤 블록들의 해시가 줄줄이 다시 계산</b>돼요(주황색 반짝임). 채굴해둔 뒤 블록이 있었다면 <b>0으로 시작하던 게 깨지는 것</b>도 보입니다.</p>
         <div class="minichain" id="mcChain"></div>
-        <div class="callout warn">
+        <div class="callout warn" data-i18n="sha.chainWarn">
           <b>그래서 위조가 안 됩니다:</b> 지난 블록의 데이터를 하나만 몰래 바꿔도, 그 뒤 <b>모든 블록의 해시가 어긋나</b> 사슬이 끊긴 게 즉시 보여요.
           공격자는 바꾼 블록부터 끝까지 <b>전부 다시 채굴</b>해야 하는데(탭 2에서 그게 얼마나 힘든지 체감했죠), 정직한 네트워크를 따라잡는 건 사실상 불가능합니다.
           <br><span class="small muted">→ 실제로 거래를 넣고 채굴해 사슬을 키운 뒤, 블록을 몰래 조작해 검증으로 잡아내는 체험은 <b>탭 3 · 블록체인 시뮬레이터</b>에서.</span>
         </div>
 
         <details class="aside">
-          <summary>🧪 곁다리 — "그럼 양자 컴퓨터가 나오면 비트코인 깨지는 거 아냐?"</summary>
-          <div class="aside-body">
+          <summary data-i18n="sha.qSummary">🧪 곁다리 — "그럼 양자 컴퓨터가 나오면 비트코인 깨지는 거 아냐?"</summary>
+          <div class="aside-body" data-i18n="sha.qBody">
             <p>자주 나오는 얘기예요. 근데 <b>두 가지 위협을 나눠서</b> 봐야 정확합니다.</p>
             <ul class="tight">
               <li><b>① 해시 · 채굴 (SHA-256)</b> — 양자의 <b>그로버(Grover) 알고리즘</b>은 이 "0으로 시작하는 nonce 찾기" 같은 무차별 대입을 <b>제곱근(√)만큼</b>만 빨라지게 해요. 256비트가 체감 128비트로 줄 뿐 여전히 천문학적이고, 난이도가 자동 조정돼 흡수됩니다. → 위에서 말한 <b>재채굴을 "가능"하게 만들진 못해요.</b></li>
@@ -159,56 +250,56 @@
          ============================================================ -->
     <section class="tab-panel" id="tab-mining">
       <div class="card">
-        <h2>채굴 = "조건을 만족하는 nonce 찾기" 노가다</h2>
-        <p class="lead">
+        <h2 data-i18n="pow.h1">채굴 = "조건을 만족하는 nonce 찾기" 노가다</h2>
+        <p class="lead" data-i18n="pow.lead">
           블록 데이터는 그대로 두고 <span class="mono">nonce</span>(숫자)만 0,1,2,… 바꿔가며 해시를 다시 계산해요.
           해시가 <b>0이 N개</b>로 시작하면 성공. 정답을 찾는 빠른 방법은 없고 오직 <b>무차별 대입</b>뿐입니다.
         </p>
         <div class="row">
-          <label class="field grow">블록 데이터 (해시할 내용)
+          <label class="field grow"><span data-i18n="pow.dataLabel">블록 데이터 (해시할 내용)</span>
             <input id="powData" value="Block: Satoshi -> You : 50 BTC" />
           </label>
-          <label class="field">난이도 (앞자리 0의 개수)
+          <label class="field"><span data-i18n="pow.diffLabel">난이도 (앞자리 0의 개수)</span>
             <input id="powDiff" type="range" min="1" max="6" value="3" />
           </label>
-          <div class="stat btc" style="max-width:90px"><div class="k">난이도</div><div class="v" id="powDiffVal">3</div></div>
+          <div class="stat btc" style="max-width:90px"><div class="k" data-i18n="pow.diffK">난이도</div><div class="v" id="powDiffVal">3</div></div>
         </div>
         <div class="row" style="margin-top:12px; align-items:center;">
-          <button class="btn primary" id="powStart">⛏ 채굴 시작</button>
-          <button class="btn ghost" id="powStop" disabled>중지</button>
-          <span class="small muted" id="powHint">목표: 해시가 <b class="mono" id="powTarget">000</b>… 으로 시작해야 합니다.</span>
+          <button class="btn primary" id="powStart" data-i18n="pow.start">⛏ 채굴 시작</button>
+          <button class="btn ghost" id="powStop" disabled data-i18n="pow.stop">중지</button>
+          <span class="small muted" id="powHint" data-i18n="pow.goal">목표: 해시가 <b class="mono" id="powTarget">000</b>… 으로 시작해야 합니다.</span>
         </div>
       </div>
 
       <div class="card">
-        <h3>채굴기</h3>
+        <h3 data-i18n="pow.minerH">채굴기</h3>
         <div class="miner-stage">
           <div class="mining-anim" id="powAnim" hidden>
             <span class="pick">⛏️</span>
             <span class="ore">₿</span>
             <span class="spark"></span>
           </div>
-          <div class="miner-target">현재 해시 입력: <span class="mono" id="powPreimage">—</span></div>
+          <div class="miner-target" data-i18n="pow.preimage">현재 해시 입력: <span class="mono" id="powPreimage">—</span></div>
           <div class="miner-hash" id="powHash">—</div>
           <div class="miner-stats">
-            <div class="ms"><div class="k">시도한 nonce</div><div class="v" id="powNonce">0</div></div>
-            <div class="ms"><div class="k">해시 계산 횟수</div><div class="v" id="powAttempts">0</div></div>
-            <div class="ms"><div class="k">속도 (해시/초)</div><div class="v" id="powRate">0</div></div>
-            <div class="ms"><div class="k">경과</div><div class="v" id="powElapsed">0.0s</div></div>
+            <div class="ms"><div class="k" data-i18n="pow.statNonce">시도한 nonce</div><div class="v" id="powNonce">0</div></div>
+            <div class="ms"><div class="k" data-i18n="pow.statAttempts">해시 계산 횟수</div><div class="v" id="powAttempts">0</div></div>
+            <div class="ms"><div class="k" data-i18n="pow.statRate">속도 (해시/초)</div><div class="v" id="powRate">0</div></div>
+            <div class="ms"><div class="k" data-i18n="pow.statElapsed">경과</div><div class="v" id="powElapsed">0.0s</div></div>
           </div>
         </div>
 
-        <h3>노가다 로그 <span class="pill-tag">nonce를 1씩 올리며 해시를 다시 계산</span></h3>
-        <p class="lead small">한 줄 = 한 번의 시도예요. <code class="mono">데이터 + nonce</code> 를 SHA-256에 넣어 본 결과죠. 앞에 0이 모자라면 ❌, 목표만큼 0으로 시작하면 ✅. 정답을 미리 알 방법이 없어서 <b>0번부터 하나씩 무작정 대입</b>하는 게 전부입니다.</p>
-        <div class="console" id="powLog"><div class="line init">⛏ 채굴을 시작하면 시도 과정이 여기 한 줄씩 찍힙니다.</div></div>
+        <h3 data-i18n="pow.logH">노가다 로그 <span class="pill-tag">nonce를 1씩 올리며 해시를 다시 계산</span></h3>
+        <p class="lead small" data-i18n="pow.logLead">한 줄 = 한 번의 시도예요. <code class="mono">데이터 + nonce</code> 를 SHA-256에 넣어 본 결과죠. 앞에 0이 모자라면 ❌, 목표만큼 0으로 시작하면 ✅. 정답을 미리 알 방법이 없어서 <b>0번부터 하나씩 무작정 대입</b>하는 게 전부입니다.</p>
+        <div class="console" id="powLog"><div class="line init" data-i18n="pow.logInit">⛏ 채굴을 시작하면 시도 과정이 여기 한 줄씩 찍힙니다.</div></div>
 
-        <div class="callout why" style="margin-top:16px">
+        <div class="callout why" style="margin-top:16px" data-i18n="pow.whySecure">
           <b>왜 이게 보안이 되나요?</b> 난이도를 1 올리면 평균 시도 횟수가 약 <b>16배</b>로 늘어요(16진수라서). 블록을 위조하려면 그 블록부터 끝까지 <b>전부 다시 채굴</b>해야 하는데, 정직한 네트워크의 계산력을 따라잡지 못하면 불가능합니다. 반면 검증은 해시 한 번이면 끝 — <b>찾기는 어렵고 확인은 쉽다.</b>
         </div>
 
         <details class="aside">
-          <summary>🔎 이 실험실은 쉽게 보여주려고 3가지를 단순화했어요 (실제 비트코인은?)</summary>
-          <div class="aside-body">
+          <summary data-i18n="pow.simplSummary">🔎 이 실험실은 쉽게 보여주려고 3가지를 단순화했어요 (실제 비트코인은?)</summary>
+          <div class="aside-body" data-i18n="pow.simplBody">
             <p>여긴 브라우저에서 <b>즉시 체감</b>하려고 난이도를 확 낮췄어요(1~6). 실제 비트코인은 이렇게 다릅니다:</p>
             <ul class="tight">
               <li><b>① "0 개수"가 진짜 기준이 아니에요</b> — 여기선 "해시 앞 0이 N개"로 판정하지만, 실제론 <b>해시(를 숫자로 본 값)가 <span class="mono">target</span>이라는 256비트 숫자보다 작거나 같은가</b>로 판정해요. 0이 많을수록 작은 수라 결과는 비슷하지만, 이 방식이라 난이도를 <b>0 개수처럼 뚝뚝 끊지 않고 연속적으로</b> 미세 조정할 수 있습니다.</li>
@@ -220,7 +311,7 @@
           </div>
         </details>
 
-        <div class="callout" style="margin-top:16px">
+        <div class="callout" style="margin-top:16px" data-i18n="pow.attack51">
           <b>⚡ 그럼 이 계산력의 절반 이상을 가지면? = 51% 공격</b><br>
           방금 본 그 어마어마한 계산력(전 세계 합산)을 <b>혼자 절반 넘게</b> 감당할 수 있다면, 정직한 네트워크보다 <b>빠르게 블록을 쌓아</b> 더 긴 체인을 만들어 과거 거래를 뒤집을 수 있어요. 이게 <b>51% 공격</b>입니다.
           <br>하지만 ⑴ 그 정도 장비면 <b>정직하게 채굴하는 게 더 이득</b>이고, ⑵ 블록이 깊이 묻힐수록(=컨펌↑) 성공 확률이 <b>기하급수적으로 0에 수렴</b>해서 사실상 불가능해요.
@@ -237,34 +328,34 @@
     <section class="tab-panel" id="tab-chain">
       <!-- 설정 -->
       <div class="card">
-        <h2>① 엔진 설정</h2>
-        <p class="lead">프리셋을 고르거나 값을 직접 바꾼 뒤 엔진을 시작하세요. (제네시스 블록이 채굴되며 시작됩니다)</p>
+        <h2 data-i18n="cs.setupH">① 엔진 설정</h2>
+        <p class="lead" data-i18n="cs.setupLead">프리셋을 고르거나 값을 직접 바꾼 뒤 엔진을 시작하세요. (제네시스 블록이 채굴되며 시작됩니다)</p>
         <div class="row">
-          <label class="field"><span class="lbl-row">프리셋 <span class="hint" title="여러 설정값을 한 번에 채워주는 묶음입니다. '교육용'은 값을 작게 줄여 몇 초 안에 반감기·난이도조정을 체험하고, '비트코인'은 실제 네트워크 값을 채웁니다. 값을 직접 바꾸면 '커스텀'이 됩니다.">?</span></span>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.preset">프리셋</span> <span class="hint" data-i18n-attr="title:cs.presetHint" title="여러 설정값을 한 번에 채워주는 묶음입니다. '교육용'은 값을 작게 줄여 몇 초 안에 반감기·난이도조정을 체험하고, '비트코인'은 실제 네트워크 값을 채웁니다. 값을 직접 바꾸면 '커스텀'이 됩니다.">?</span></span>
             <select id="preset">
-              <option value="educational">교육용 (빠른 체험)</option>
-              <option value="bitcoin">실제 비트코인 값</option>
-              <option value="custom">커스텀</option>
+              <option value="educational" data-i18n="cs.presetEdu">교육용 (빠른 체험)</option>
+              <option value="bitcoin" data-i18n="cs.presetBtc">실제 비트코인 값</option>
+              <option value="custom" data-i18n="cs.presetCustom">커스텀</option>
             </select>
           </label>
-          <label class="field"><span class="lbl-row">초기 난이도 <span class="hint" title="채굴에 성공하려면 해시 앞에 와야 하는 0(16진수)의 개수입니다. 1 늘어날 때마다 평균 시도 횟수가 약 16배로 폭증해요. 시작값이며, 아래 '난이도조정' 주기마다 자동으로 바뀔 수 있습니다. 비트코인 최초값은 1.">?</span></span> <input id="cfgDiff" type="number" min="1" max="6" value="2" style="width:90px"></label>
-          <label class="field"><span class="lbl-row">보상(BTC) <span class="hint" title="블록을 채굴한 사람이 받는 새로 발행되는 코인(코인베이스 거래)입니다. 비트코인은 2009년 50 BTC로 시작해 반감기를 거쳐 현재 3.125 BTC.">?</span></span> <input id="cfgReward" type="number" min="0" step="0.1" value="50" style="width:90px"></label>
-          <label class="field"><span class="lbl-row">반감기(블록) <span class="hint" title="채굴 보상이 절반으로 줄어드는 주기입니다. 예: 10이면 10블록마다 50→25→12.5… 로 감소. 발행량(인플레이션)을 줄이는 장치예요. 비트코인은 21만 블록(약 4년)마다.">?</span></span> <input id="cfgHalving" type="number" min="1" value="10" style="width:100px"></label>
-          <label class="field"><span class="lbl-row">난이도조정(블록) <span class="hint" title="난이도를 다시 계산하는 주기입니다. 이 블록 수마다 '최근 블록들이 목표시간보다 빨리/느리게 나왔나'를 보고 난이도를 올리거나 내려요. 블록 생성 '속도'를 일정하게 유지하는 장치(반감기와 다름). 비트코인은 2016블록(약 2주).">?</span></span> <input id="cfgAdjust" type="number" min="1" value="4" style="width:110px"></label>
-          <label class="field"><span class="lbl-row">목표시간(초) <span class="hint" title="블록 1개가 만들어지길 바라는 평균 시간입니다. 실제가 이보다 빠르면 난이도를 올리고, 느리면 내려서 속도를 맞춰요. 비트코인은 600초(10분).">?</span></span> <input id="cfgTarget" type="number" min="1" value="3" style="width:100px"></label>
-          <label class="field"><span class="lbl-row">블록당 최대거래 <span class="hint" title="한 블록에 담을 수 있는 거래(코인베이스 제외)의 최대 개수입니다. 멤풀에 이보다 많아도 한 블록엔 이만큼만 들어가요. 비트코인은 용량 기준 대략 2~3천 건.">?</span></span> <input id="cfgMaxTx" type="number" min="1" value="10" style="width:110px"></label>
-          <button class="btn primary" id="engineStart">엔진 새로 시작</button>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.diff">초기 난이도</span> <span class="hint" data-i18n-attr="title:cs.diffHint" title="채굴에 성공하려면 해시 앞에 와야 하는 0(16진수)의 개수입니다. 1 늘어날 때마다 평균 시도 횟수가 약 16배로 폭증해요. 시작값이며, 아래 '난이도조정' 주기마다 자동으로 바뀔 수 있습니다. 비트코인 최초값은 1.">?</span></span> <input id="cfgDiff" type="number" min="1" max="6" value="2" style="width:90px"></label>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.reward">보상(BTC)</span> <span class="hint" data-i18n-attr="title:cs.rewardHint" title="블록을 채굴한 사람이 받는 새로 발행되는 코인(코인베이스 거래)입니다. 비트코인은 2009년 50 BTC로 시작해 반감기를 거쳐 현재 3.125 BTC.">?</span></span> <input id="cfgReward" type="number" min="0" step="0.1" value="50" style="width:90px"></label>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.halving">반감기(블록)</span> <span class="hint" data-i18n-attr="title:cs.halvingHint" title="채굴 보상이 절반으로 줄어드는 주기입니다. 예: 10이면 10블록마다 50→25→12.5… 로 감소. 발행량(인플레이션)을 줄이는 장치예요. 비트코인은 21만 블록(약 4년)마다.">?</span></span> <input id="cfgHalving" type="number" min="1" value="10" style="width:100px"></label>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.adjust">난이도조정(블록)</span> <span class="hint" data-i18n-attr="title:cs.adjustHint" title="난이도를 다시 계산하는 주기입니다. 이 블록 수마다 '최근 블록들이 목표시간보다 빨리/느리게 나왔나'를 보고 난이도를 올리거나 내려요. 블록 생성 '속도'를 일정하게 유지하는 장치(반감기와 다름). 비트코인은 2016블록(약 2주).">?</span></span> <input id="cfgAdjust" type="number" min="1" value="4" style="width:110px"></label>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.target">목표시간(초)</span> <span class="hint" data-i18n-attr="title:cs.targetHint" title="블록 1개가 만들어지길 바라는 평균 시간입니다. 실제가 이보다 빠르면 난이도를 올리고, 느리면 내려서 속도를 맞춰요. 비트코인은 600초(10분).">?</span></span> <input id="cfgTarget" type="number" min="1" value="3" style="width:100px"></label>
+          <label class="field"><span class="lbl-row"><span data-i18n="cs.maxTx">블록당 최대거래</span> <span class="hint" data-i18n-attr="title:cs.maxTxHint" title="한 블록에 담을 수 있는 거래(코인베이스 제외)의 최대 개수입니다. 멤풀에 이보다 많아도 한 블록엔 이만큼만 들어가요. 비트코인은 용량 기준 대략 2~3천 건.">?</span></span> <input id="cfgMaxTx" type="number" min="1" value="10" style="width:110px"></label>
+          <button class="btn primary" id="engineStart" data-i18n="cs.restart">엔진 새로 시작</button>
         </div>
       </div>
 
       <!-- 통계 -->
       <div class="card">
         <div class="stats">
-          <div class="stat blue"><div class="k">블록 높이 <span class="hint" title="체인에 쌓인 블록 개수입니다. 제네시스(#0)부터 셉니다. 높이 3 = 블록 #0,#1,#2 존재.">?</span></div><div class="v" id="stHeight">0</div></div>
-          <div class="stat btc"><div class="k">현재 난이도 <span class="hint" title="지금 채굴에 필요한 해시 앞 0의 개수. '난이도조정' 주기마다 자동으로 바뀝니다.">?</span></div><div class="v" id="stDiff">0</div></div>
-          <div class="stat green"><div class="k">현재 블록 보상 <span class="hint" title="지금 채굴하면 받는 코인 양. 반감기를 지날 때마다 절반으로 줄어듭니다.">?</span></div><div class="v" id="stReward">0<small> BTC</small></div></div>
-          <div class="stat"><div class="k">멤풀 대기 거래 <span class="hint" title="승인됐지만 아직 블록에 담기지 않고 대기 중인 거래 수. 채굴하면 이 거래들이 블록에 들어갑니다.">?</span></div><div class="v" id="stMempool">0</div></div>
-          <div class="stat btc"><div class="k">총 발행량 <span class="hint" title="지금까지 채굴 보상으로 새로 만들어진 코인의 총합(모든 잔액의 합). 거래는 코인을 이동만 시키므로 총량은 채굴로만 늘어납니다.">?</span></div><div class="v" id="stSupply">0<small> BTC</small></div></div>
+          <div class="stat blue"><div class="k"><span data-i18n="cs.stHeight">블록 높이</span> <span class="hint" data-i18n-attr="title:cs.stHeightHint" title="체인에 쌓인 블록 개수입니다. 제네시스(#0)부터 셉니다. 높이 3 = 블록 #0,#1,#2 존재.">?</span></div><div class="v" id="stHeight">0</div></div>
+          <div class="stat btc"><div class="k"><span data-i18n="cs.stDiff">현재 난이도</span> <span class="hint" data-i18n-attr="title:cs.stDiffHint" title="지금 채굴에 필요한 해시 앞 0의 개수. '난이도조정' 주기마다 자동으로 바뀝니다.">?</span></div><div class="v" id="stDiff">0</div></div>
+          <div class="stat green"><div class="k"><span data-i18n="cs.stReward">현재 블록 보상</span> <span class="hint" data-i18n-attr="title:cs.stRewardHint" title="지금 채굴하면 받는 코인 양. 반감기를 지날 때마다 절반으로 줄어듭니다.">?</span></div><div class="v" id="stReward">0<small> BTC</small></div></div>
+          <div class="stat"><div class="k"><span data-i18n="cs.stMempool">멤풀 대기 거래</span> <span class="hint" data-i18n-attr="title:cs.stMempoolHint" title="승인됐지만 아직 블록에 담기지 않고 대기 중인 거래 수. 채굴하면 이 거래들이 블록에 들어갑니다.">?</span></div><div class="v" id="stMempool">0</div></div>
+          <div class="stat btc"><div class="k"><span data-i18n="cs.stSupply">총 발행량</span> <span class="hint" data-i18n-attr="title:cs.stSupplyHint" title="지금까지 채굴 보상으로 새로 만들어진 코인의 총합(모든 잔액의 합). 거래는 코인을 이동만 시키므로 총량은 채굴로만 늘어납니다.">?</span></div><div class="v" id="stSupply">0<small> BTC</small></div></div>
         </div>
       </div>
 
@@ -273,63 +364,63 @@
         <div class="fm-body">
           <div class="fm-icon">⛏</div>
           <div class="fm-text">
-            <b>먼저 채굴부터! 아직 아무도 코인이 없어요.</b>
-            <span>비트코인은 <b>채굴</b>로만 새 코인이 태어나요(누가 보내주는 게 아님). 블록을 채굴하면 채굴자 <span class="mono" id="fmMiner">Satoshi</span> 가 <b><span id="fmReward">50</span> BTC</b>를 받아, <b>그때부터 거래를 보낼 수 있습니다.</b></span>
+            <b data-i18n="cs.fmTitle">먼저 채굴부터! 아직 아무도 코인이 없어요.</b>
+            <span data-i18n="cs.fmBody">비트코인은 <b>채굴</b>로만 새 코인이 태어나요(누가 보내주는 게 아님). 블록을 채굴하면 채굴자 <span class="mono" id="fmMiner">Satoshi</span> 가 <b><span id="fmReward">50</span> BTC</b>를 받아, <b>그때부터 거래를 보낼 수 있습니다.</b></span>
           </div>
-          <button class="btn primary" id="firstMineBtn">⛏ 첫 블록 채굴하기</button>
+          <button class="btn primary" id="firstMineBtn" data-i18n="cs.fmBtn">⛏ 첫 블록 채굴하기</button>
         </div>
       </div>
 
       <div class="grid cols-2">
         <!-- 거래 만들기 -->
         <div class="card">
-          <h2>② 거래 만들기</h2>
-          <p class="lead">보내는 사람의 잔액이 부족하면 엔진이 거부해요(이중지불 방지).</p>
+          <h2 data-i18n="cs.txH">② 거래 만들기</h2>
+          <p class="lead" data-i18n="cs.txLead">보내는 사람의 잔액이 부족하면 엔진이 거부해요(이중지불 방지).</p>
           <div class="row">
-            <label class="field grow"><span class="lbl-row">보내는 사람 <span class="hint" title="코인을 보내는 주소(이름). 이 사람의 잔액이 보내려는 금액보다 적으면 거래가 거부됩니다. 잔액을 가지려면 먼저 이 사람으로 채굴하거나, 이 사람이 받은 거래가 있어야 해요.">?</span></span>
+            <label class="field grow"><span class="lbl-row"><span data-i18n="cs.txFrom">보내는 사람</span> <span class="hint" data-i18n-attr="title:cs.txFromHint" title="코인을 보내는 주소(이름). 이 사람의 잔액이 보내려는 금액보다 적으면 거래가 거부됩니다. 잔액을 가지려면 먼저 이 사람으로 채굴하거나, 이 사람이 받은 거래가 있어야 해요.">?</span></span>
               <input id="txFrom" list="addrList" value="Satoshi" />
             </label>
-            <label class="field grow"><span class="lbl-row">받는 사람 <span class="hint" title="코인을 받는 주소(이름). 아무 이름이나 새로 적어도 됩니다(지갑이 자동 생성되는 셈).">?</span></span>
+            <label class="field grow"><span class="lbl-row"><span data-i18n="cs.txTo">받는 사람</span> <span class="hint" data-i18n-attr="title:cs.txToHint" title="코인을 받는 주소(이름). 아무 이름이나 새로 적어도 됩니다(지갑이 자동 생성되는 셈).">?</span></span>
               <input id="txTo" list="addrList" value="Alice" />
             </label>
-            <label class="field"><span class="lbl-row">금액(BTC) <span class="hint" title="보낼 코인 양. 0보다 커야 하고, 보내는 사람의 잔액 이하여야 승인됩니다.">?</span></span>
+            <label class="field"><span class="lbl-row"><span data-i18n="cs.txAmount">금액(BTC)</span> <span class="hint" data-i18n-attr="title:cs.txAmountHint" title="보낼 코인 양. 0보다 커야 하고, 보내는 사람의 잔액 이하여야 승인됩니다.">?</span></span>
               <input id="txAmount" type="number" min="0" step="0.1" value="20" style="width:100px" />
             </label>
           </div>
           <datalist id="addrList"></datalist>
           <div class="row" style="margin-top:12px">
-            <button class="btn" id="txAdd">멤풀에 거래 추가</button>
+            <button class="btn" id="txAdd" data-i18n="cs.txAdd">멤풀에 거래 추가</button>
             <span class="small muted" id="txMsg"></span>
           </div>
-          <h3>멤풀 (다음 블록에 담길 거래)</h3>
-          <div class="tx-list" id="mempool"><div class="empty">아직 대기 중인 거래가 없습니다.</div></div>
+          <h3 data-i18n="cs.mempoolH">멤풀 (다음 블록에 담길 거래)</h3>
+          <div class="tx-list" id="mempool"><div class="empty" data-i18n="cs.mempoolEmpty">아직 대기 중인 거래가 없습니다.</div></div>
         </div>
 
         <!-- 잔액 -->
         <div class="card">
-          <h2>지갑 잔액</h2>
-          <p class="lead">채굴 보상(코인베이스)과 거래로 잔액이 바뀝니다.</p>
-          <div class="balances" id="balances"><div class="empty">아직 잔액이 없습니다. 블록을 채굴해 보세요.</div></div>
+          <h2 data-i18n="cs.balH">지갑 잔액</h2>
+          <p class="lead" data-i18n="cs.balLead">채굴 보상(코인베이스)과 거래로 잔액이 바뀝니다.</p>
+          <div class="balances" id="balances"><div class="empty" data-i18n="cs.balEmpty">아직 잔액이 없습니다. 블록을 채굴해 보세요.</div></div>
         </div>
       </div>
 
       <!-- 채굴 -->
       <div class="card">
-        <h2>③ 블록 채굴</h2>
-        <p class="lead">멤풀의 거래들을 모아 새 블록을 채굴합니다. 맨 앞에는 채굴 보상(코인베이스) 거래가 자동으로 들어가요.</p>
+        <h2 data-i18n="cs.mineH">③ 블록 채굴</h2>
+        <p class="lead" data-i18n="cs.mineLead">멤풀의 거래들을 모아 새 블록을 채굴합니다. 맨 앞에는 채굴 보상(코인베이스) 거래가 자동으로 들어가요.</p>
         <div class="row">
-          <label class="field grow"><span class="lbl-row">채굴자 주소 (보상 받을 사람) <span class="hint" title="이 블록을 채굴해서 보상(코인베이스)을 받을 주소입니다. 새 코인은 항상 이 채굴 과정에서만 생겨요.">?</span></span>
+          <label class="field grow"><span class="lbl-row"><span data-i18n="cs.minerAddr">채굴자 주소 (보상 받을 사람)</span> <span class="hint" data-i18n-attr="title:cs.minerAddrHint" title="이 블록을 채굴해서 보상(코인베이스)을 받을 주소입니다. 새 코인은 항상 이 채굴 과정에서만 생겨요.">?</span></span>
             <input id="minerAddr" value="Satoshi" />
           </label>
-          <button class="btn primary" id="mineBtn">⛏ 채굴 시작</button>
+          <button class="btn primary" id="mineBtn" data-i18n="cs.mineBtn">⛏ 채굴 시작</button>
         </div>
         <div class="miner-stage" id="chainMiner" style="margin-top:14px; display:none">
-          <div class="miner-target">목표 <b id="cmTarget">00</b>… · 채굴 중 <span class="spin">⛏</span></div>
+          <div class="miner-target" data-i18n="cs.mineTarget">목표 <b id="cmTarget">00</b>… · 채굴 중 <span class="spin">⛏</span></div>
           <div class="miner-hash" id="cmHash">—</div>
           <div class="miner-stats">
             <div class="ms"><div class="k">nonce</div><div class="v" id="cmNonce">0</div></div>
-            <div class="ms"><div class="k">시도</div><div class="v" id="cmAttempts">0</div></div>
-            <div class="ms"><div class="k">속도</div><div class="v" id="cmRate">0</div></div>
+            <div class="ms"><div class="k" data-i18n="cs.mineAttempts">시도</div><div class="v" id="cmAttempts">0</div></div>
+            <div class="ms"><div class="k" data-i18n="cs.mineRate">속도</div><div class="v" id="cmRate">0</div></div>
           </div>
         </div>
       </div>
@@ -337,13 +428,13 @@
       <!-- 체인 + 검증 -->
       <div class="card">
         <div class="row" style="justify-content:space-between; align-items:center;">
-          <h2 style="margin:0">④ 블록체인 & 검증</h2>
+          <h2 style="margin:0" data-i18n="cs.chainH">④ 블록체인 & 검증</h2>
           <div class="row">
-            <button class="btn green" id="validateBtn">🔍 체인 검증</button>
+            <button class="btn green" id="validateBtn" data-i18n="cs.validateBtn">🔍 체인 검증</button>
           </div>
         </div>
         <div id="verdict" style="margin:14px 0; display:none"></div>
-        <div class="callout why">
+        <div class="callout why" data-i18n="cs.validWhat">
           <b>🔍 체인 검증은 뭘 하나요?</b> 제네시스(#0)는 기준점이라 건너뛰고, <b>#1부터 모든 블록</b>에 대해 딱 두 가지를 확인해요:
           <ul class="tight" style="margin:8px 0 2px">
             <li><b>① 해시 재계산 일치?</b> — 그 블록의 <b>현재 내용</b>(거래·nonce·이전해시 등)으로 해시를 <b>다시 계산</b>해 저장된 해시와 비교. 다르면 → <b>데이터 조작</b>.</li>
@@ -351,7 +442,7 @@
           </ul>
           하나라도 어긋나면 <b>어느 블록이 왜 깨졌는지</b> 딱 짚어줘요. 검증은 해시 계산 몇 번이면 끝 — <b>찾기는 어려워도 확인은 순식간.</b>
         </div>
-        <div class="callout warn">
+        <div class="callout warn" data-i18n="cs.tamperExp">
           <b>위변조 실험:</b> 아래 채굴된 블록의 거래 옆에 버튼이 두 개 있어요. 둘 다 <b>체인 검증</b>을 누르면 잡히지만, <b>걸리는 지점이 달라요</b>:
           <ul class="tight" style="margin:8px 0 2px">
             <li><span class="kbd">조작</span> — 데이터만 바꾸고 <b>해시는 그대로</b>. → 검증 <b>①(해시 불일치)</b>에서 걸림.</li>
@@ -364,8 +455,8 @@
 
       <!-- 왜 못 되돌리나: 가장 긴 체인 & 51% 공격 -->
       <div class="card">
-        <h2>⑤ 왜 못 되돌리나 — "가장 긴 체인이 이긴다" &amp; 51% 공격</h2>
-        <p class="lead">
+        <h2 data-i18n="cs.longestH">⑤ 왜 못 되돌리나 — "가장 긴 체인이 이긴다" &amp; 51% 공격</h2>
+        <p class="lead" data-i18n="cs.longestLead">
           위에서 블록을 조작하면 검증에 걸리죠. 그럼 공격자가 <b>조작한 블록부터 다시 채굴</b>하면 되지 않을까요?
           문제는 그러는 <b>동안에도 정직한 네트워크는 계속 블록을 쌓는다</b>는 거예요. 그래서 공격자는 따라잡는 게 아니라 <b>추월</b>해야 합니다.
         </p>
@@ -373,34 +464,34 @@
         <div class="fork">
           <div class="fork-common">
             <span class="fk base">#5</span>
-            <span class="fork-note">공격자가 여기(#5)를<br>조작 → 여기서 갈라짐</span>
+            <span class="fork-note" data-i18n="cs.forkNote">공격자가 여기(#5)를<br>조작 → 여기서 갈라짐</span>
           </div>
           <div class="fork-branches">
             <div class="fork-row">
               <span class="fork-lead">├─</span>
               <span class="fk honest">6</span><span class="fk honest">7</span><span class="fk honest">8</span><span class="fk honest">9</span>
-              <span class="fork-tag ok">✅ 정직한 체인 — 더 길다 → 노드들이 자동으로 이걸 채택</span>
+              <span class="fork-tag ok" data-i18n="cs.forkHonest">✅ 정직한 체인 — 더 길다 → 노드들이 자동으로 이걸 채택</span>
             </div>
             <div class="fork-row">
               <span class="fork-lead">└─</span>
               <span class="fk attacker">6′</span><span class="fk attacker">7′</span>
-              <span class="fork-tag bad">❌ 공격자 체인 — 짧다 → 버려짐(고아 블록)</span>
+              <span class="fork-tag bad" data-i18n="cs.forkAttacker">❌ 공격자 체인 — 짧다 → 버려짐(고아 블록)</span>
             </div>
           </div>
         </div>
 
-        <div class="callout why">
+        <div class="callout why" data-i18n="cs.nodeRule">
           <b>노드의 규칙은 딱 하나:</b> <span class="mono">유효한 체인 중 "가장 긴(누적 작업량이 가장 큰)" 것을 따른다.</span>
           <br>누구에게 <b>허락·투표를 받는 게 아니라</b>, 더 긴 체인이 나타나면 노드들이 <b>알아서 그걸로 갈아탑니다.</b>
         </div>
 
         <ul class="tight">
-          <li><b>추월하려면 = 해시파워 51%+</b> — 정직한 네트워크 <b>전체보다 빠르게</b> 블록을 쌓아야 더 긴 체인을 만들 수 있어요. 그건 전 세계 채굴 계산력의 절반 이상을 혼자 가져야 한다는 뜻(수십조 원어치 장비·전기).</li>
-          <li><b>그럴 능력이면 정직하게 채굴이 이득</b> — 공격에 성공해도 신뢰가 무너져 코인 가치가 폭락하니, 차라리 정직하게 보상 받는 게 이득이라 <b>공격 유인 자체가 없어요.</b></li>
-          <li><b>깊이 묻힐수록 안전(컨펌)</b> — 목표 블록 위에 블록이 쌓일수록(=컨펌 수↑) 추월 확률이 <b>기하급수적으로 0에 수렴</b>. 그래서 거래소는 보통 <b>6 컨펌</b>(블록 6개)을 기다립니다.</li>
+          <li data-i18n="cs.pt51"><b>추월하려면 = 해시파워 51%+</b> — 정직한 네트워크 <b>전체보다 빠르게</b> 블록을 쌓아야 더 긴 체인을 만들 수 있어요. 그건 전 세계 채굴 계산력의 절반 이상을 혼자 가져야 한다는 뜻(수십조 원어치 장비·전기).</li>
+          <li data-i18n="cs.ptHonest"><b>그럴 능력이면 정직하게 채굴이 이득</b> — 공격에 성공해도 신뢰가 무너져 코인 가치가 폭락하니, 차라리 정직하게 보상 받는 게 이득이라 <b>공격 유인 자체가 없어요.</b></li>
+          <li data-i18n="cs.ptConf"><b>깊이 묻힐수록 안전(컨펌)</b> — 목표 블록 위에 블록이 쌓일수록(=컨펌 수↑) 추월 확률이 <b>기하급수적으로 0에 수렴</b>. 그래서 거래소는 보통 <b>6 컨펌</b>(블록 6개)을 기다립니다.</li>
         </ul>
 
-        <div class="callout warn">
+        <div class="callout warn" data-i18n="cs.longestSum">
           <b>한 줄 요약:</b> 위조 = <b>바꾼 블록부터 끝까지 재채굴 + 정직한 네트워크를 추월할 만큼 더 길게</b> 만들기.
           노드는 "가장 긴 체인" 규칙으로 판단하므로, 추월하려면 <b>계산력 51% 이상</b>이 필요 → 사실상 불가능합니다.
         </div>
@@ -408,8 +499,8 @@
 
       <!-- 엔진 로그 -->
       <div class="card">
-        <h2>엔진 로그 <span class="pill-tag">Rust가 출력하는 메시지</span></h2>
-        <p class="lead small">CLI에서 <code class="mono">println!</code> 으로 찍히던 그 메시지를 브라우저로 그대로 가져온 거예요.</p>
+        <h2 data-i18n="cs.logH">엔진 로그 <span class="pill-tag">Rust가 출력하는 메시지</span></h2>
+        <p class="lead small" data-i18n="cs.logLead">CLI에서 <code class="mono">println!</code> 으로 찍히던 그 메시지를 브라우저로 그대로 가져온 거예요.</p>
         <div class="console" id="console"></div>
       </div>
     </section>
@@ -419,17 +510,17 @@
          ============================================================ -->
     <section class="tab-panel" id="tab-utxo">
       <div class="card">
-        <h2>비트코인엔 "잔액"이 없어요 — 동전(UTXO)만 있습니다</h2>
-        <p class="lead">3번 탭은 <b>계좌식</b>(Alice=20, Bob=10처럼 잔액을 기억)이었어요. 하지만 진짜 비트코인은 잔액을 저장하지 않고, <b>"아직 안 쓴 거래 출력(UTXO)"</b> 조각들만 둡니다. 지갑이 그걸 다 더해 잔액을 <i>계산</i>할 뿐이죠.</p>
-        <div class="callout why">
+        <h2 data-i18n="ux.introH">비트코인엔 "잔액"이 없어요 — 동전(UTXO)만 있습니다</h2>
+        <p class="lead" data-i18n="ux.introLead">3번 탭은 <b>계좌식</b>(Alice=20, Bob=10처럼 잔액을 기억)이었어요. 하지만 진짜 비트코인은 잔액을 저장하지 않고, <b>"아직 안 쓴 거래 출력(UTXO)"</b> 조각들만 둡니다. 지갑이 그걸 다 더해 잔액을 <i>계산</i>할 뿐이죠.</p>
+        <div class="callout why" data-i18n="ux.introCash">
           <b>지폐 비유:</b> 지갑에 5만원권 한 장이 있을 때 1.2만원을 내려면? 5만원을 <b>통째로 내고</b> → 상대는 1.2만원, 나는 <b>거스름돈 3.8만원</b>을 새로 받죠. "잔액에서 빼기"가 아니라 <b>헌 동전 소비 + 새 동전 발행</b>입니다. 이 "새 동전"이 바로 UTXO예요.
         </div>
         <ul class="tight">
-          <li><b>입력(input)</b> = 소비할 기존 UTXO들 (반드시 통째로)</li>
-          <li><b>출력(output)</b> = 새로 생기는 UTXO (받는 사람 몫 + 거스름돈)</li>
-          <li><b>수수료(fee)</b> = 입력 합계 − 출력 합계 → 채굴자 몫</li>
+          <li data-i18n="ux.introLi1"><b>입력(input)</b> = 소비할 기존 UTXO들 (반드시 통째로)</li>
+          <li data-i18n="ux.introLi2"><b>출력(output)</b> = 새로 생기는 UTXO (받는 사람 몫 + 거스름돈)</li>
+          <li data-i18n="ux.introLi3"><b>수수료(fee)</b> = 입력 합계 − 출력 합계 → 채굴자 몫</li>
         </ul>
-        <div class="callout key">
+        <div class="callout key" data-i18n="ux.introKey">
           <b>🔑 그런데 — 그 동전이 "내 것"인 건 어떻게 증명하죠?</b> 각 UTXO는 받는 사람의 <b>주소</b>(= 공개키를 해시한 값)에 <b>잠겨</b> 있어요.
           그 동전을 쓰려면 짝이 되는 <b>개인키로 거래에 서명</b>해서 "내가 주인이다"를 증명해야 합니다.
           누구나 <b>공개키로 서명을 검증</b>할 수 있지만, 개인키 없이는 유효한 서명을 <b>만들 수 없어요</b>.
@@ -439,31 +530,31 @@
 
       <!-- 지갑(키쌍) -->
       <div class="card">
-        <h2>지갑 (키쌍) <span class="pill-tag">secp256k1</span></h2>
-        <p class="lead small">발행/송금에 처음 등장하는 이름마다 <b>개인키·공개키 한 쌍</b>이 자동 생성돼요. <b>주소</b>는 공개키를 해시해 만든 값이고, 동전은 이 주소에 잠깁니다. 개인키는 비밀(엔진 내부에만 존재).</p>
-        <div id="uWallets"><div class="empty">아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.</div></div>
+        <h2 data-i18n="ux.walletH">지갑 (키쌍) <span class="pill-tag">secp256k1</span></h2>
+        <p class="lead small" data-i18n="ux.walletLead">발행/송금에 처음 등장하는 이름마다 <b>개인키·공개키 한 쌍</b>이 자동 생성돼요. <b>주소</b>는 공개키를 해시해 만든 값이고, 동전은 이 주소에 잠깁니다. 개인키는 비밀(엔진 내부에만 존재).</p>
+        <div id="uWallets"><div class="empty" data-i18n="ux.walletEmpty">아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.</div></div>
       </div>
 
       <!-- 타원곡선 시각화: 개인키·공개키가 뭔지 그림으로 -->
       <div class="card">
-        <h2>🎨 그림으로 이해하기 — 개인키·공개키가 대체 뭔데? <span class="muted" style="font-size:13px">(수식 없이)</span></h2>
-        <p class="lead small">공개키·개인키는 <b>타원곡선</b> 위에서 하는 "점 점프 놀이"예요. 시작점 <b>G</b>에서 정해진 규칙(선 긋고 → 만나는 점 → 위아래 뒤집기)으로 점프하는데 — <b>몇 번 점프했는지 = 개인키(비밀)</b>, <b>최종 착지점 = 공개키(공개)</b>. 버튼을 눌러 한 번씩 더해보세요.</p>
+        <h2 data-i18n="ux.curveH">🎨 그림으로 이해하기 — 개인키·공개키가 대체 뭔데? <span class="muted" style="font-size:13px">(수식 없이)</span></h2>
+        <p class="lead small" data-i18n="ux.curveLead">공개키·개인키는 <b>타원곡선</b> 위에서 하는 "점 점프 놀이"예요. 시작점 <b>G</b>에서 정해진 규칙(선 긋고 → 만나는 점 → 위아래 뒤집기)으로 점프하는데 — <b>몇 번 점프했는지 = 개인키(비밀)</b>, <b>최종 착지점 = 공개키(공개)</b>. 버튼을 눌러 한 번씩 더해보세요.</p>
         <div class="curve-wrap">
           <svg id="curveSvg" viewBox="0 0 520 360" role="img" aria-label="타원곡선 점 덧셈 시각화"></svg>
         </div>
         <div class="curve-ctrls">
-          <button class="btn primary" id="curveAdd">＋ G 한 번 더 더하기 (점프!)</button>
-          <button class="btn ghost" id="curveReset">↺ 처음부터</button>
+          <button class="btn primary" id="curveAdd" data-i18n="ux.curveAdd">＋ G 한 번 더 더하기 (점프!)</button>
+          <button class="btn ghost" id="curveReset" data-i18n="ux.curveReset">↺ 처음부터</button>
           <div class="curve-read" id="curveRead"></div>
         </div>
         <div class="curve-legend small muted">
-          <span><span class="dot" style="background:#3fb950"></span> G (시작점)</span>
-          <span><span class="dot" style="background:#c9d1d9"></span> 중간 착지점</span>
-          <span><span class="dot" style="background:#f7931a"></span> 지금 착지점 = 공개키 Q</span>
-          <span><span class="dash" style="background:#58a6ff"></span> 선 긋기(덧셈)</span>
-          <span><span class="dash" style="background:#bc8cff"></span> 위아래 뒤집기</span>
+          <span><span class="dot" style="background:#3fb950"></span> <span data-i18n="ux.curveLg1">G (시작점)</span></span>
+          <span><span class="dot" style="background:#c9d1d9"></span> <span data-i18n="ux.curveLg2">중간 착지점</span></span>
+          <span><span class="dot" style="background:#f7931a"></span> <span data-i18n="ux.curveLg3">지금 착지점 = 공개키 Q</span></span>
+          <span><span class="dash" style="background:#58a6ff"></span> <span data-i18n="ux.curveLg4">선 긋기(덧셈)</span></span>
+          <span><span class="dash" style="background:#bc8cff"></span> <span data-i18n="ux.curveLg5">위아래 뒤집기</span></span>
         </div>
-        <div class="callout key" style="margin-top:12px">
+        <div class="callout key" style="margin-top:12px" data-i18n="ux.curveKey">
           <b>🔑 여기가 핵심:</b> G에서 <b>d번 점프해 Q에 도착</b>하는 건 쉬워요(그냥 버튼 d번). 하지만 <b>착지점 Q만 보고 "몇 번 점프했게?"(= d)를 알아내는 건 불가능</b>합니다 — 점프가 곡선 위를 마구 튀어다녀서 거꾸로 되짚을 방법이 없거든요.
           <ul class="tight" style="margin:8px 0 2px">
             <li><b>개인키 d</b> = 점프 횟수 <span class="muted">(비밀)</span></li>
@@ -472,47 +563,47 @@
           </ul>
           실제 비트코인 개인키는 이 점프를 <b>2<sup>256</sup></b>(우주의 원자 수보다 많음) 근처 횟수만큼 한 착지점이라, 슈퍼컴을 다 끌어와도 못 되짚어요. 그래서 공개키는 맘껏 공개해도 안전해요.
         </div>
-        <div class="callout why">
+        <div class="callout why" data-i18n="ux.curveSig">
           <b>그럼 "서명"은?</b> "나는 이 착지점 Q를 만든 <b>점프 횟수 d를 안다</b>"를, <b>d를 한 번도 말하지 않고</b> 증명하는 수학 트릭이 바로 <b>서명</b>이에요. 남들은 <b>공개키 Q로 그 증명이 맞는지 확인(검증)</b>만 하죠. → 개인키 없인 서명을 못 만들고, 만들어진 서명은 공개키로 누구나 검증돼요. (송금할 때 아래 서명 블록에서 이게 실제로 돌아가요.)
         </div>
       </div>
 
       <div class="grid cols-2">
         <div class="card">
-          <h2>① 코인 발행 (코인베이스)</h2>
-          <p class="lead">UTXO가 있어야 보낼 수 있어요. 먼저 누군가에게 새 코인을 만들어 줍니다.</p>
+          <h2 data-i18n="ux.fundH">① 코인 발행 (코인베이스)</h2>
+          <p class="lead" data-i18n="ux.fundLead">UTXO가 있어야 보낼 수 있어요. 먼저 누군가에게 새 코인을 만들어 줍니다.</p>
           <div class="row">
-            <label class="field grow"><span class="lbl-row">받을 주소 <span class="hint" title="이 주소로 잠긴 새 UTXO가 하나 생깁니다. 실제로는 채굴 보상(코인베이스)으로만 새 코인이 생겨요.">?</span></span>
+            <label class="field grow"><span class="lbl-row"><span data-i18n="ux.fundAddr">받을 주소</span> <span class="hint" data-i18n-attr="title:ux.fundAddrTip" title="이 주소로 잠긴 새 UTXO가 하나 생깁니다. 실제로는 채굴 보상(코인베이스)으로만 새 코인이 생겨요.">?</span></span>
               <input id="uFundAddr" list="uAddrList" value="Alice" />
             </label>
-            <label class="field"><span class="lbl-row">금액(BTC) <span class="hint" title="발행할 UTXO 한 개의 액면가.">?</span></span>
+            <label class="field"><span class="lbl-row"><span data-i18n="ux.fundAmt">금액(BTC)</span> <span class="hint" data-i18n-attr="title:ux.fundAmtTip" title="발행할 UTXO 한 개의 액면가.">?</span></span>
               <input id="uFundAmt" type="number" min="0" step="0.1" value="50" style="width:100px" />
             </label>
-            <button class="btn green" id="uFundBtn">＋ 발행</button>
+            <button class="btn green" id="uFundBtn" data-i18n="ux.fundBtn">＋ 발행</button>
           </div>
-          <div class="row small muted" style="margin-top:6px">예시로 한 주소에 여러 번 발행하면, 그 사람 지갑에 동전이 여러 개 쌓입니다(각각이 UTXO).</div>
+          <div class="row small muted" style="margin-top:6px" data-i18n="ux.fundNote">예시로 한 주소에 여러 번 발행하면, 그 사람 지갑에 동전이 여러 개 쌓입니다(각각이 UTXO).</div>
         </div>
 
         <div class="card">
-          <h2>② 송금</h2>
-          <p class="lead">큰 동전부터 골라 <b>목표+수수료</b> 이상이 될 때까지 소비하고, 거스름돈을 돌려받아요.</p>
+          <h2 data-i18n="ux.sendH">② 송금</h2>
+          <p class="lead" data-i18n="ux.sendLead">큰 동전부터 골라 <b>목표+수수료</b> 이상이 될 때까지 소비하고, 거스름돈을 돌려받아요.</p>
           <div class="row">
-            <label class="field grow"><span class="lbl-row">보내는 사람 <span class="hint" title="이 주소의 UTXO들 중에서 큰 것부터 골라 소비합니다.">?</span></span>
+            <label class="field grow"><span class="lbl-row"><span data-i18n="ux.sendFrom">보내는 사람</span> <span class="hint" data-i18n-attr="title:ux.sendFromTip" title="이 주소의 UTXO들 중에서 큰 것부터 골라 소비합니다.">?</span></span>
               <input id="uFrom" list="uAddrList" value="Alice" />
             </label>
-            <label class="field grow"><span class="lbl-row">받는 사람 <span class="hint" title="받는 주소로 새 UTXO(출력)가 생깁니다.">?</span></span>
+            <label class="field grow"><span class="lbl-row"><span data-i18n="ux.sendTo">받는 사람</span> <span class="hint" data-i18n-attr="title:ux.sendToTip" title="받는 주소로 새 UTXO(출력)가 생깁니다.">?</span></span>
               <input id="uTo" list="uAddrList" value="Bob" />
             </label>
           </div>
           <div class="row" style="margin-top:10px">
-            <label class="field"><span class="lbl-row">금액 <span class="hint" title="받는 사람에게 보낼 금액.">?</span></span>
+            <label class="field"><span class="lbl-row"><span data-i18n="ux.sendAmt">금액</span> <span class="hint" data-i18n-attr="title:ux.sendAmtTip" title="받는 사람에게 보낼 금액.">?</span></span>
               <input id="uAmt" type="number" min="0" step="0.1" value="12" style="width:90px" />
             </label>
-            <label class="field"><span class="lbl-row">수수료 <span class="hint" title="입력합 − 출력합. 채굴자가 가져갑니다. 0도 가능.">?</span></span>
+            <label class="field"><span class="lbl-row"><span data-i18n="ux.sendFee">수수료</span> <span class="hint" data-i18n-attr="title:ux.sendFeeTip" title="입력합 − 출력합. 채굴자가 가져갑니다. 0도 가능.">?</span></span>
               <input id="uFee" type="number" min="0" step="0.1" value="0.1" style="width:90px" />
             </label>
-            <button class="btn primary" id="uSendBtn">↪ 송금</button>
-            <button class="btn ghost" id="uReset">초기화</button>
+            <button class="btn primary" id="uSendBtn" data-i18n="ux.sendBtn">↪ 송금</button>
+            <button class="btn ghost" id="uReset" data-i18n="ux.resetBtn">초기화</button>
           </div>
           <div class="row small" id="uMsg" style="margin-top:6px"></div>
         </div>
@@ -520,16 +611,16 @@
 
       <!-- 거래 내역 다이어그램 -->
       <div class="card" id="uFlowCard" style="display:none">
-        <h2>방금 거래: 입력 → 출력 <span class="pill-tag" id="uFlowTxid"></span></h2>
+        <h2><span data-i18n="ux.flowH">방금 거래: 입력 → 출력</span> <span class="pill-tag" id="uFlowTxid"></span></h2>
         <div class="utxo-flow">
           <div>
-            <div class="flow-label">입력 (소비된 UTXO)</div>
+            <div class="flow-label" data-i18n="ux.flowIn">입력 (소비된 UTXO)</div>
             <div class="coins" id="uFlowInputs"></div>
             <div class="flow-sum" id="uFlowInSum"></div>
           </div>
           <div class="flow-arrow">→</div>
           <div>
-            <div class="flow-label">출력 (새 UTXO)</div>
+            <div class="flow-label" data-i18n="ux.flowOut">출력 (새 UTXO)</div>
             <div class="coins" id="uFlowOutputs"></div>
             <div class="flow-sum" id="uFlowOutSum"></div>
           </div>
@@ -542,19 +633,19 @@
 
       <!-- ③ 위조 시도(도둑질) -->
       <div class="card forge-card">
-        <h2>③ 위조 시도 — 남의 동전 훔치기 🦹</h2>
-        <p class="lead">공격자가 <b>피해자의 UTXO</b>를 자기 앞으로 보내는 거래를 만들어 봅니다. 하지만 공격자는 피해자의 <b>개인키가 없어요</b>. 자기 키로 서명할 수밖에 없고, 그 키의 주소는 피해자 주소와 다르므로 <b>검증에서 거부</b>됩니다.</p>
+        <h2 data-i18n="ux.forgeH">③ 위조 시도 — 남의 동전 훔치기 🦹</h2>
+        <p class="lead" data-i18n="ux.forgeLead">공격자가 <b>피해자의 UTXO</b>를 자기 앞으로 보내는 거래를 만들어 봅니다. 하지만 공격자는 피해자의 <b>개인키가 없어요</b>. 자기 키로 서명할 수밖에 없고, 그 키의 주소는 피해자 주소와 다르므로 <b>검증에서 거부</b>됩니다.</p>
         <div class="row">
-          <label class="field grow"><span class="lbl-row">공격자 <span class="hint" title="훔치려는 사람. 자기 개인키로 서명합니다.">?</span></span>
+          <label class="field grow"><span class="lbl-row"><span data-i18n="ux.forgeAtk">공격자</span> <span class="hint" data-i18n-attr="title:ux.forgeAtkTip" title="훔치려는 사람. 자기 개인키로 서명합니다.">?</span></span>
             <input id="uForgeAttacker" list="uAddrList" value="Hacker" />
           </label>
-          <label class="field grow"><span class="lbl-row">피해자 <span class="hint" title="이 사람의 UTXO를 빼앗으려 합니다.">?</span></span>
+          <label class="field grow"><span class="lbl-row"><span data-i18n="ux.forgeVictim">피해자</span> <span class="hint" data-i18n-attr="title:ux.forgeVictimTip" title="이 사람의 UTXO를 빼앗으려 합니다.">?</span></span>
             <input id="uForgeVictim" list="uAddrList" value="Bob" />
           </label>
-          <label class="field"><span class="lbl-row">금액 <span class="hint" title="훔치려는 금액.">?</span></span>
+          <label class="field"><span class="lbl-row"><span data-i18n="ux.sendAmt">금액</span> <span class="hint" data-i18n-attr="title:ux.forgeAmtTip" title="훔치려는 금액.">?</span></span>
             <input id="uForgeAmt" type="number" min="0" step="0.1" value="10" style="width:90px" />
           </label>
-          <button class="btn danger" id="uForgeBtn">🦹 훔치기 시도</button>
+          <button class="btn danger" id="uForgeBtn" data-i18n="ux.forgeBtn">🦹 훔치기 시도</button>
         </div>
         <div class="forge-result" id="uForgeResult"></div>
         <!-- 도둑질도 송금과 똑같은 1·2·3 파이프라인을 렌더 → ③(a)에서 실패하는 걸 눈으로 -->
@@ -563,15 +654,15 @@
 
       <!-- UTXO 풀 -->
       <div class="card">
-        <h2>UTXO 풀 (현재 안 쓴 모든 동전)</h2>
-        <p class="lead small">주소별로 묶었어요. 각 칩 = UTXO 한 개. <span style="color:var(--blue)">파란 테두리</span>는 거스름돈으로 생긴 UTXO예요. 잔액은 칩들의 합으로 <b>계산</b>됩니다(저장 아님).</p>
-        <div id="uPool"><div class="empty">아직 UTXO가 없습니다. ①에서 코인을 발행해 보세요.</div></div>
+        <h2 data-i18n="ux.poolH">UTXO 풀 (현재 안 쓴 모든 동전)</h2>
+        <p class="lead small" data-i18n="ux.poolLead">주소별로 묶었어요. 각 칩 = UTXO 한 개. <span style="color:var(--blue)">파란 테두리</span>는 거스름돈으로 생긴 UTXO예요. 잔액은 칩들의 합으로 <b>계산</b>됩니다(저장 아님).</p>
+        <div id="uPool"><div class="empty" data-i18n="ux.poolEmpty">아직 UTXO가 없습니다. ①에서 코인을 발행해 보세요.</div></div>
       </div>
 
       <datalist id="uAddrList"></datalist>
 
       <div class="card">
-        <h2>엔진 로그 <span class="pill-tag">UTXO 엔진(Rust)</span></h2>
+        <h2 data-i18n="ux.logH">엔진 로그 <span class="pill-tag">UTXO 엔진(Rust)</span></h2>
         <div class="console" id="uConsole"></div>
       </div>
     </section>
@@ -581,52 +672,52 @@
          ============================================================ -->
     <section class="tab-panel" id="tab-anatomy">
       <div class="card">
-        <h2>채굴할 때 실제로 해시하는 건 거래가 아니라 "80바이트 헤더"예요</h2>
-        <p class="lead">2·3번 탭에선 설명을 위해 블록 전체를 문자열로 이어붙여 해시했어요. 하지만 진짜 비트코인은 다릅니다. 거래 수천 건은 <b>머클트리</b>로 32바이트 <b>머클루트</b> 하나로 요약하고, 채굴자는 딱 <b>80바이트 헤더</b>만 <b>double SHA-256</b>으로 반복 해시하죠. 그리고 난이도는 "0의 개수"가 아니라 <b>target이라는 256비트 숫자보다 작은가</b>로 판정해요.</p>
-        <div class="callout why">이 탭은 이 4가지(머클트리 · 헤더 · double SHA-256 · target)를 한 흐름으로 직접 만들어 봅니다. 모든 계산은 동일한 Rust 엔진이 합니다.</div>
+        <h2 data-i18n="an.introH">채굴할 때 실제로 해시하는 건 거래가 아니라 "80바이트 헤더"예요</h2>
+        <p class="lead" data-i18n="an.introLead">2·3번 탭에선 설명을 위해 블록 전체를 문자열로 이어붙여 해시했어요. 하지만 진짜 비트코인은 다릅니다. 거래 수천 건은 <b>머클트리</b>로 32바이트 <b>머클루트</b> 하나로 요약하고, 채굴자는 딱 <b>80바이트 헤더</b>만 <b>double SHA-256</b>으로 반복 해시하죠. 그리고 난이도는 "0의 개수"가 아니라 <b>target이라는 256비트 숫자보다 작은가</b>로 판정해요.</p>
+        <div class="callout why" data-i18n="an.introWhy">이 탭은 이 4가지(머클트리 · 헤더 · double SHA-256 · target)를 한 흐름으로 직접 만들어 봅니다. 모든 계산은 동일한 Rust 엔진이 합니다.</div>
       </div>
 
       <!-- 1. 거래 -> 머클트리 -->
       <div class="card">
-        <h2>① 거래들 → 머클트리 → 머클루트</h2>
-        <p class="lead small">거래를 한 줄에 하나씩 적어요(내용은 자유). 각 거래를 <b>double SHA-256</b>해 잎(leaf)을 만들고, 둘씩 이어붙여 해시하길 반복해 꼭대기의 <b>루트</b> 하나로 압축합니다. 노드 수가 홀수면 <b>마지막 노드를 복제</b>해 짝을 맞춰요.</p>
+        <h2 data-i18n="an.mkH">① 거래들 → 머클트리 → 머클루트</h2>
+        <p class="lead small" data-i18n="an.mkLead">거래를 한 줄에 하나씩 적어요(내용은 자유). 각 거래를 <b>double SHA-256</b>해 잎(leaf)을 만들고, 둘씩 이어붙여 해시하길 반복해 꼭대기의 <b>루트</b> 하나로 압축합니다. 노드 수가 홀수면 <b>마지막 노드를 복제</b>해 짝을 맞춰요.</p>
         <textarea id="anTxs" rows="4" spellcheck="false">Alice -> Bob : 5
 Bob -> Carol : 2
 Carol -> Dave : 1
 Coinbase -> Miner : 6.25</textarea>
         <div class="row" style="margin-top:10px">
-          <button class="btn primary" id="anBuildBtn">머클트리 만들기</button>
+          <button class="btn primary" id="anBuildBtn" data-i18n="an.buildBtn">머클트리 만들기</button>
           <span class="small muted" id="anMkInfo"></span>
         </div>
         <div class="merkle-scroll"><div id="anMerkle" class="merkle"></div></div>
         <div class="merkle-root-line" id="anRootLine" style="display:none">
-          <span class="mr-label">머클루트</span>
+          <span class="mr-label" data-i18n="an.rootLabel">머클루트</span>
           <span class="mono mr-val" id="anRoot"></span>
         </div>
       </div>
 
       <!-- 2. 헤더 + target -->
       <div class="card">
-        <h2>② 블록 헤더(80바이트) 조립 + 목표(target)</h2>
-        <p class="lead small">머클루트와 직전 블록 해시, 난이도를 넣어 헤더를 만듭니다. 헤더는 정확히 6필드 · 80바이트예요.</p>
+        <h2 data-i18n="an.hdrH">② 블록 헤더(80바이트) 조립 + 목표(target)</h2>
+        <p class="lead small" data-i18n="an.hdrLead">머클루트와 직전 블록 해시, 난이도를 넣어 헤더를 만듭니다. 헤더는 정확히 6필드 · 80바이트예요.</p>
         <div class="row">
-          <label class="field grow"><span class="lbl-row">직전 블록 해시 (prev) <span class="hint" title="앞 블록 헤더의 해시. 이게 블록들을 사슬처럼 잇습니다. 첫 블록은 0.">?</span></span>
+          <label class="field grow"><span class="lbl-row"><span data-i18n="an.prevLabel">직전 블록 해시 (prev)</span> <span class="hint" data-i18n-attr="title:an.prevTip" title="앞 블록 헤더의 해시. 이게 블록들을 사슬처럼 잇습니다. 첫 블록은 0.">?</span></span>
             <input id="anPrev" class="mono" value="0000000000000000000000000000000000000000000000000000000000000000" />
           </label>
-          <label class="field"><span class="lbl-row">난이도(선행 0비트) <span class="hint" title="target = 2^(256-비트수) - 1. 비트가 클수록 target이 작아져 더 어렵습니다. 브라우저에선 16~24 권장(2^비트 ≈ 평균 시도횟수).">?</span></span>
+          <label class="field"><span class="lbl-row"><span data-i18n="an.bitsLabel">난이도(선행 0비트)</span> <span class="hint" data-i18n-attr="title:an.bitsTip" title="target = 2^(256-비트수) - 1. 비트가 클수록 target이 작아져 더 어렵습니다. 브라우저에선 16~24 권장(2^비트 ≈ 평균 시도횟수).">?</span></span>
             <input id="anBits" type="number" min="1" max="28" value="20" style="width:120px" />
           </label>
-          <button class="btn green" id="anAssembleBtn">헤더 조립</button>
+          <button class="btn green" id="anAssembleBtn" data-i18n="an.assembleBtn">헤더 조립</button>
         </div>
 
         <div id="anHeaderBox" style="display:none">
           <div class="hdr-fields" id="anHdrFields"></div>
           <div class="hdr-serial">
-            <div class="flow-label">직렬화된 헤더 (80바이트 = 160 hex) — <b>이게 채굴이 해시하는 입력</b></div>
+            <div class="flow-label" data-i18n="an.serialLabel">직렬화된 헤더 (80바이트 = 160 hex) — <b>이게 채굴이 해시하는 입력</b></div>
             <div class="mono hdr-hex" id="anHdrHex"></div>
           </div>
           <div class="target-box">
-            <div class="flow-label">목표 target (이 숫자보다 <b>작거나 같은</b> 블록해시를 찾아야 함)</div>
+            <div class="flow-label" data-i18n="an.targetLabel">목표 target (이 숫자보다 <b>작거나 같은</b> 블록해시를 찾아야 함)</div>
             <div class="mono target-hex" id="anTargetHex"></div>
             <div class="small muted" id="anExpected"></div>
           </div>
@@ -635,35 +726,35 @@ Coinbase -> Miner : 6.25</textarea>
 
       <!-- 3. 채굴 (double SHA-256 + target 비교) -->
       <div class="card" id="anMineCard" style="display:none">
-        <h2>③ 채굴 — nonce를 바꿔가며 double SHA-256</h2>
-        <p class="lead small">nonce(헤더의 마지막 4바이트)만 1씩 바꿔 헤더를 다시 해시합니다. <b>SHA-256을 두 번</b> 적용한 결과가 target 이하가 될 때까지 반복해요.</p>
+        <h2 data-i18n="an.mineH">③ 채굴 — nonce를 바꿔가며 double SHA-256</h2>
+        <p class="lead small" data-i18n="an.mineLead">nonce(헤더의 마지막 4바이트)만 1씩 바꿔 헤더를 다시 해시합니다. <b>SHA-256을 두 번</b> 적용한 결과가 target 이하가 될 때까지 반복해요.</p>
         <div class="row">
-          <button class="btn primary" id="anMineBtn">⛏ 채굴 시작</button>
-          <button class="btn ghost" id="anStopBtn" disabled>멈춤</button>
+          <button class="btn primary" id="anMineBtn" data-i18n="an.mineBtn">⛏ 채굴 시작</button>
+          <button class="btn ghost" id="anStopBtn" disabled data-i18n="an.stopBtn">멈춤</button>
           <span class="mining-stat" id="anMineStat"></span>
         </div>
 
         <div class="dsha">
           <div class="dsha-step">
-            <div class="flow-label">헤더 80바이트</div>
+            <div class="flow-label" data-i18n="an.d0">헤더 80바이트</div>
             <div class="mono dsha-cell" id="anDStep0">—</div>
           </div>
           <div class="flow-arrow">↓ SHA-256</div>
           <div class="dsha-step">
-            <div class="flow-label">1차 해시 (중간값)</div>
+            <div class="flow-label" data-i18n="an.d1">1차 해시 (중간값)</div>
             <div class="mono dsha-cell" id="anDStep1">—</div>
           </div>
-          <div class="flow-arrow">↓ SHA-256 다시</div>
+          <div class="flow-arrow" data-i18n="an.dAgain">↓ SHA-256 다시</div>
           <div class="dsha-step">
-            <div class="flow-label">최종 블록 해시</div>
+            <div class="flow-label" data-i18n="an.d2">최종 블록 해시</div>
             <div class="mono dsha-cell big" id="anDStep2">—</div>
           </div>
         </div>
 
         <div class="cmp-box">
-          <div class="cmp-row"><span class="cmp-tag">블록해시</span><span class="mono" id="anCmpHash">—</span></div>
+          <div class="cmp-row"><span class="cmp-tag" data-i18n="an.cmpHash">블록해시</span><span class="mono" id="anCmpHash">—</span></div>
           <div class="cmp-row"><span class="cmp-tag">target　 </span><span class="mono" id="anCmpTarget">—</span></div>
-          <div class="cmp-verdict" id="anCmpVerdict">아직 채굴 전</div>
+          <div class="cmp-verdict" id="anCmpVerdict" data-i18n="an.cmpIdle">아직 채굴 전</div>
         </div>
       </div>
     </section>
@@ -673,38 +764,38 @@ Coinbase -> Miner : 6.25</textarea>
          ============================================================ -->
     <section class="tab-panel" id="tab-network">
       <div class="card">
-        <h2>노드는 여러 대예요. "누구 체인이 진짜냐"는 규칙으로 정해집니다</h2>
-        <p class="lead">지금까지의 탭은 전부 <b>노드 1대의 내부 동작</b>이었어요. 하지만 진짜 비트코인은 수만 대의 노드가 각자 자기 체인을 들고, 서로 블록을 주고받으며 합의합니다. 중앙 서버도, 심판도 없어요. 대신 딱 하나의 규칙으로 정리되죠 — <b>가장 길고 유효한 체인이 이긴다.</b></p>
+        <h2 data-i18n="net.introH">노드는 여러 대예요. "누구 체인이 진짜냐"는 규칙으로 정해집니다</h2>
+        <p class="lead" data-i18n="net.introLead">지금까지의 탭은 전부 <b>노드 1대의 내부 동작</b>이었어요. 하지만 진짜 비트코인은 수만 대의 노드가 각자 자기 체인을 들고, 서로 블록을 주고받으며 합의합니다. 중앙 서버도, 심판도 없어요. 대신 딱 하나의 규칙으로 정리되죠 — <b>가장 길고 유효한 체인이 이긴다.</b></p>
         <div class="callout why">
-          <b>노드끼리의 규칙 (합의 프로토콜)</b>
+          <b data-i18n="net.rulesH">노드끼리의 규칙 (합의 프로토콜)</b>
           <ol class="rule-list">
-            <li><b>같은 뿌리</b> — 모든 노드는 동일한 <b>제네시스 블록</b>에서 출발해요. 그래야 서로의 체인을 비교할 수 있어요.</li>
-            <li><b>채굴 = 자기만의 블록</b> — 노드가 블록을 캐면 <b>일단 자기만</b> 알아요. 방송하기 전엔 남들은 몰라요.</li>
-            <li><b>방송(P2P gossip)</b> — 캔 블록/체인을 이웃에게 퍼뜨려요. 이웃은 또 자기 이웃에게 전달하며 네트워크 전체로 번져요.</li>
-            <li><b>가장 긴 체인 채택</b> — 더 길고 <b>유효한</b>(해시·연결·PoW가 맞는) 체인을 받으면 자기 걸 버리고 갈아탑니다(<b>재구성 / reorg</b>).</li>
-            <li><b>포크 & orphan</b> — 두 노드가 동시에 같은 높이 블록을 캐면 <b>포크</b>가 생겨 잠깐 공존해요. 다음 블록이 한쪽에 붙는 순간 그쪽이 이기고, 진 블록은 <b>버려집니다(orphan/stale)</b>.</li>
+            <li data-i18n="net.rule1"><b>같은 뿌리</b> — 모든 노드는 동일한 <b>제네시스 블록</b>에서 출발해요. 그래야 서로의 체인을 비교할 수 있어요.</li>
+            <li data-i18n="net.rule2"><b>채굴 = 자기만의 블록</b> — 노드가 블록을 캐면 <b>일단 자기만</b> 알아요. 방송하기 전엔 남들은 몰라요.</li>
+            <li data-i18n="net.rule3"><b>방송(P2P gossip)</b> — 캔 블록/체인을 이웃에게 퍼뜨려요. 이웃은 또 자기 이웃에게 전달하며 네트워크 전체로 번져요.</li>
+            <li data-i18n="net.rule4"><b>가장 긴 체인 채택</b> — 더 길고 <b>유효한</b>(해시·연결·PoW가 맞는) 체인을 받으면 자기 걸 버리고 갈아탑니다(<b>재구성 / reorg</b>).</li>
+            <li data-i18n="net.rule5"><b>포크 & orphan</b> — 두 노드가 동시에 같은 높이 블록을 캐면 <b>포크</b>가 생겨 잠깐 공존해요. 다음 블록이 한쪽에 붙는 순간 그쪽이 이기고, 진 블록은 <b>버려집니다(orphan/stale)</b>.</li>
           </ol>
         </div>
       </div>
 
       <div class="card">
         <div class="row net-controls">
-          <label class="field"><span class="lbl-row">노드 수</span>
+          <label class="field"><span class="lbl-row" data-i18n="net.nodeCount">노드 수</span>
             <input id="netNodeCount" type="number" min="2" max="5" value="3" style="width:90px" />
           </label>
-          <label class="field"><span class="lbl-row">난이도(선행 0) <span class="hint" title="블록 해시 앞에 와야 하는 0의 개수. 크면 채굴이 조금 느려집니다. 2~4 권장.">?</span></span>
+          <label class="field"><span class="lbl-row"><span data-i18n="net.diff">난이도(선행 0)</span> <span class="hint" data-i18n-attr="title:net.diffTip" title="블록 해시 앞에 와야 하는 0의 개수. 크면 채굴이 조금 느려집니다. 2~4 권장.">?</span></span>
             <input id="netDifficulty" type="number" min="1" max="5" value="3" style="width:90px" />
           </label>
-          <button class="btn primary" id="netResetBtn">네트워크 초기화</button>
-          <button class="btn" id="netScenarioBtn" title="포크 → 재구성(reorg)이 일어나는 과정을 자동으로 시연합니다">▶ 포크·재구성 시나리오 자동 시연</button>
+          <button class="btn primary" id="netResetBtn" data-i18n="net.resetBtn">네트워크 초기화</button>
+          <button class="btn" id="netScenarioBtn" data-i18n="net.scenarioBtn" data-i18n-attr="title:net.scenarioTip" title="포크 → 재구성(reorg)이 일어나는 과정을 자동으로 시연합니다">▶ 포크·재구성 시나리오 자동 시연</button>
         </div>
-        <p class="small muted" id="netHint" style="margin-top:8px">각 노드에서 <b>채굴</b>해 블록을 붙이고, <b>방송</b>으로 이웃에게 퍼뜨려 보세요. 두 노드에서 각각 캐면 포크가 생기고, 한쪽을 더 길게 만든 뒤 방송하면 재구성(reorg)이 일어납니다.</p>
+        <p class="small muted" id="netHint" style="margin-top:8px" data-i18n="net.hint">각 노드에서 <b>채굴</b>해 블록을 붙이고, <b>방송</b>으로 이웃에게 퍼뜨려 보세요. 두 노드에서 각각 캐면 포크가 생기고, 한쪽을 더 길게 만든 뒤 방송하면 재구성(reorg)이 일어납니다.</p>
       </div>
 
       <div id="netNodes" class="net-nodes"></div>
 
       <div class="card">
-        <h2>네트워크 로그</h2>
+        <h2 data-i18n="net.logH">네트워크 로그</h2>
         <div id="netLog" class="net-log"></div>
       </div>
     </section>
@@ -714,46 +805,46 @@ Coinbase -> Miner : 6.25</textarea>
          ============================================================ -->
     <section class="tab-panel" id="tab-attack">
       <div class="card">
-        <h2>"가장 긴 체인이 이긴다"를 악용하면 — 이중지불 공격</h2>
-        <p class="lead">한마디로 <b>"돈 내고 물건 받은 뒤, 그 결제 기록을 몰래 지워버리는"</b> 사기예요. 같은 코인을 <b>두 번</b> 쓰는 거죠.</p>
+        <h2 data-i18n="ds.introH">"가장 긴 체인이 이긴다"를 악용하면 — 이중지불 공격</h2>
+        <p class="lead" data-i18n="ds.introLead">한마디로 <b>"돈 내고 물건 받은 뒤, 그 결제 기록을 몰래 지워버리는"</b> 사기예요. 같은 코인을 <b>두 번</b> 쓰는 거죠.</p>
 
         <div class="ds-story">
-          <div class="ds-story-h">🛒 쉽게: 중고로 노트북 사기</div>
+          <div class="ds-story-h" data-i18n="ds.storyH">🛒 쉽게: 중고로 노트북 사기</div>
           <ol class="ds-story-list">
-            <li><b>공격자</b>가 <b>판매자(상점)</b>에게서 노트북을 사며 비트코인 10개를 보냄 → 이 결제가 블록에 담김</li>
-            <li>판매자는 "입금 확인!" 하고 <b>노트북을 택배로 발송</b> 📦 <span class="muted">(현실에선 되돌릴 수 없음)</span></li>
-            <li>그 사이 공격자는 <b>몰래 다른 버전의 역사</b>를 캐고 있었음 — 그 역사엔 <b>노트북 결제가 아예 없고</b>, 코인을 <b>자기 지갑으로 돌려놓음</b></li>
-            <li>이 비밀 체인이 더 길어지면 공개 → 네트워크가 <b>더 긴 체인</b>으로 갈아탐(재구성/reorg)</li>
-            <li>결과: 노트북 결제는 <b>없던 일</b>이 됨. 공격자는 <b>노트북 + 코인 둘 다</b> 챙기고, 판매자는 <b>둘 다</b> 잃음 😱</li>
+            <li data-i18n="ds.story1"><b>공격자</b>가 <b>판매자(상점)</b>에게서 노트북을 사며 비트코인 10개를 보냄 → 이 결제가 블록에 담김</li>
+            <li data-i18n="ds.story2">판매자는 "입금 확인!" 하고 <b>노트북을 택배로 발송</b> 📦 <span class="muted">(현실에선 되돌릴 수 없음)</span></li>
+            <li data-i18n="ds.story3">그 사이 공격자는 <b>몰래 다른 버전의 역사</b>를 캐고 있었음 — 그 역사엔 <b>노트북 결제가 아예 없고</b>, 코인을 <b>자기 지갑으로 돌려놓음</b></li>
+            <li data-i18n="ds.story4">이 비밀 체인이 더 길어지면 공개 → 네트워크가 <b>더 긴 체인</b>으로 갈아탐(재구성/reorg)</li>
+            <li data-i18n="ds.story5">결과: 노트북 결제는 <b>없던 일</b>이 됨. 공격자는 <b>노트북 + 코인 둘 다</b> 챙기고, 판매자는 <b>둘 다</b> 잃음 😱</li>
           </ol>
         </div>
 
-        <p class="lead small" style="margin-top:12px">아래 시뮬레이터에서 <b>공개 체인</b>(모두가 아는 진짜 기록)과 <b>공격자의 비밀 체인</b>을 직접 경쟁시켜, 결제가 어떻게 증발하는지 볼 수 있어요.</p>
+        <p class="lead small" style="margin-top:12px" data-i18n="ds.simIntro">아래 시뮬레이터에서 <b>공개 체인</b>(모두가 아는 진짜 기록)과 <b>공격자의 비밀 체인</b>을 직접 경쟁시켜, 결제가 어떻게 증발하는지 볼 수 있어요.</p>
 
-        <div class="callout warn">
+        <div class="callout warn" data-i18n="ds.introWarn">
           <b>공격이 성공하려면</b> 공격자가 정직한 네트워크보다 블록을 <b>더 빨리</b> 캐야 해요(= <b>51% 해시파워</b>). 그리고 판매자가 <b>입금 확인(컨펌)을 오래 기다릴수록</b> 공격자가 그만큼 더 앞서야 해서 성공이 어려워집니다. "왜 입금 6번 확인하고 물건 주라는가"가 바로 이거예요.
         </div>
       </div>
 
       <!-- 왜 컨펌을 기다리면 안전한가 -->
       <div class="card">
-        <h2>왜 "입금 확인(컨펌)을 기다리면" 안전해질까?</h2>
-        <p class="lead small"><b>컨펌</b> = 내 결제가 담긴 블록 <b>위에 쌓인 블록 수</b>. 판매자가 물건을 보내기 전에 이걸 더 기다릴수록, 공격자가 결제를 뒤집으려고 <b>따라잡아야 할 거리</b>가 멀어져요. 공격자의 비밀 체인이 정직한 체인보다 <b>더 길어져야</b> 뒤집을 수 있는데, 기다리는 동안 <b>정직한 체인이 계속 앞서 나가기</b> 때문이죠.</p>
+        <h2 data-i18n="ds.confH">왜 "입금 확인(컨펌)을 기다리면" 안전해질까?</h2>
+        <p class="lead small" data-i18n="ds.confLead"><b>컨펌</b> = 내 결제가 담긴 블록 <b>위에 쌓인 블록 수</b>. 판매자가 물건을 보내기 전에 이걸 더 기다릴수록, 공격자가 결제를 뒤집으려고 <b>따라잡아야 할 거리</b>가 멀어져요. 공격자의 비밀 체인이 정직한 체인보다 <b>더 길어져야</b> 뒤집을 수 있는데, 기다리는 동안 <b>정직한 체인이 계속 앞서 나가기</b> 때문이죠.</p>
 
         <div class="conf-demo">
           <div class="conf-case">
-            <div class="conf-case-h risky">😮 1컨펌에 바로 발송 (성급)</div>
+            <div class="conf-case-h risky" data-i18n="ds.confCase1H">😮 1컨펌에 바로 발송 (성급)</div>
             <div class="conf-chain">
-              <span class="conf-blk pay">결제</span><span class="conf-arrow">→</span>
+              <span class="conf-blk pay" data-i18n="ds.confPay">결제</span><span class="conf-arrow">→</span>
               <span class="conf-blk">①</span>
             </div>
-            <div class="conf-note">정직한 체인이 <b>1블록</b>만 앞섬 → 공격자는 <b>2블록</b>만 몰래 만들면 추월. <b class="risky-t">해볼 만함 😈</b></div>
+            <div class="conf-note" data-i18n="ds.confCase1Note">정직한 체인이 <b>1블록</b>만 앞섬 → 공격자는 <b>2블록</b>만 몰래 만들면 추월. <b class="risky-t">해볼 만함 😈</b></div>
           </div>
 
           <div class="conf-case">
-            <div class="conf-case-h safe">🛡️ 6컨펌 기다렸다 발송 (신중)</div>
+            <div class="conf-case-h safe" data-i18n="ds.confCase2H">🛡️ 6컨펌 기다렸다 발송 (신중)</div>
             <div class="conf-chain">
-              <span class="conf-blk pay">결제</span><span class="conf-arrow">→</span>
+              <span class="conf-blk pay" data-i18n="ds.confPay">결제</span><span class="conf-arrow">→</span>
               <span class="conf-blk">①</span><span class="conf-arrow">→</span>
               <span class="conf-blk">②</span><span class="conf-arrow">→</span>
               <span class="conf-blk">③</span><span class="conf-arrow">→</span>
@@ -761,48 +852,48 @@ Coinbase -> Miner : 6.25</textarea>
               <span class="conf-blk">⑤</span><span class="conf-arrow">→</span>
               <span class="conf-blk">⑥</span>
             </div>
-            <div class="conf-note">정직한 체인이 <b>6블록</b>이나 앞섬 → 공격자는 이 격차를 <b>다 따라잡고 + 한 발 더</b> 앞서야 함. <b class="safe-t">훨씬 어려움 🛡️</b></div>
+            <div class="conf-note" data-i18n="ds.confCase2Note">정직한 체인이 <b>6블록</b>이나 앞섬 → 공격자는 이 격차를 <b>다 따라잡고 + 한 발 더</b> 앞서야 함. <b class="safe-t">훨씬 어려움 🛡️</b></div>
           </div>
         </div>
 
-        <div class="callout why" style="margin-top:14px">
+        <div class="callout why" style="margin-top:14px" data-i18n="ds.confWhy">
           한마디로: 판매자가 <b>오래 기다릴수록 정직한 체인의 리드가 커지고</b>, 공격자가 뒤집어야 할 격차도 그만큼 벌어져요. 그래서 컨펌이 하나 늘 때마다 성공 확률이 (공격자가 과반 미만이면) <b>지수적으로 뚝뚝</b> 떨어집니다. → <b>소액은 1컨펌, 큰 금액(거래소 입금 등)은 6컨펌 이상</b>을 기다리는 이유예요.
         </div>
       </div>
 
       <!-- 공격의 한계 + 성공 확률 계산기 -->
       <div class="card">
-        <h2>그래서 51% 공격, 어디까지 가능할까? — 성공 확률 계산기</h2>
-        <p class="lead small">51% 공격에도 <b>한계</b>가 있어요. 결론부터: <b>갓 결제된 최근 몇 블록</b>은 노려볼 수 있어도, <b>깊은 과거(제네시스 근처)는 사실상 절대 불가능</b>합니다. 아래에서 공격자 해시파워와 컨펌 수를 바꿔보면 왜 그런지 숫자로 보여요. (모든 계산은 Rust 엔진이 합니다.)</p>
+        <h2 data-i18n="ds.calcH">그래서 51% 공격, 어디까지 가능할까? — 성공 확률 계산기</h2>
+        <p class="lead small" data-i18n="ds.calcLead">51% 공격에도 <b>한계</b>가 있어요. 결론부터: <b>갓 결제된 최근 몇 블록</b>은 노려볼 수 있어도, <b>깊은 과거(제네시스 근처)는 사실상 절대 불가능</b>합니다. 아래에서 공격자 해시파워와 컨펌 수를 바꿔보면 왜 그런지 숫자로 보여요. (모든 계산은 Rust 엔진이 합니다.)</p>
 
         <div class="ds-limit-grid">
           <div class="ds-limit-box">
-            <div class="ds-limit-h">공격자 &lt; 50%</div>
-            <div class="ds-limit-b">컨펌이 쌓일수록 성공 확률이 <b>지수적으로 급락</b>. 6컨펌이면 사실상 0. → 깊은 과거는 불가능.</div>
+            <div class="ds-limit-h" data-i18n="ds.lim1H">공격자 &lt; 50%</div>
+            <div class="ds-limit-b" data-i18n="ds.lim1B">컨펌이 쌓일수록 성공 확률이 <b>지수적으로 급락</b>. 6컨펌이면 사실상 0. → 깊은 과거는 불가능.</div>
           </div>
           <div class="ds-limit-box">
-            <div class="ds-limit-h">공격자 ≥ 50%</div>
-            <div class="ds-limit-b">이론상 <b>언젠가는</b> 성공(확률 100%). 하지만 깊을수록 필요한 <b>시간·전기가 폭발</b>.</div>
+            <div class="ds-limit-h" data-i18n="ds.lim2H">공격자 ≥ 50%</div>
+            <div class="ds-limit-b" data-i18n="ds.lim2B">이론상 <b>언젠가는</b> 성공(확률 100%). 하지만 깊을수록 필요한 <b>시간·전기가 폭발</b>.</div>
           </div>
           <div class="ds-limit-box">
-            <div class="ds-limit-h">제네시스/오래된 블록</div>
-            <div class="ds-limit-b">누적된 일(PoW)이 <b>방패</b> + 제네시스는 <b>하드코딩</b>. → 물리적으로 불가능.</div>
+            <div class="ds-limit-h" data-i18n="ds.lim3H">제네시스/오래된 블록</div>
+            <div class="ds-limit-b" data-i18n="ds.lim3B">누적된 일(PoW)이 <b>방패</b> + 제네시스는 <b>하드코딩</b>. → 물리적으로 불가능.</div>
           </div>
         </div>
 
         <div class="row" style="margin-top:14px; align-items:flex-end; flex-wrap:wrap; gap:16px">
           <label class="field grow" style="max-width:360px">
-            <span class="lbl-row">공격자 해시파워 <b id="dsHashVal">30%</b></span>
+            <span class="lbl-row"><span data-i18n="ds.hashLabel">공격자 해시파워</span> <b id="dsHashVal">30%</b></span>
             <input id="dsHash" type="range" min="1" max="99" value="30" />
           </label>
-          <label class="field"><span class="lbl-row">판매자 컨펌 수 (깊이 z) <span class="hint" title="결제 위에 몇 블록이 쌓였는지. 클수록 과거로 깊이 들어가 뒤집기 어려움.">?</span></span>
+          <label class="field"><span class="lbl-row"><span data-i18n="ds.zLabel">판매자 컨펌 수 (깊이 z)</span> <span class="hint" data-i18n-attr="title:ds.zTip" title="결제 위에 몇 블록이 쌓였는지. 클수록 과거로 깊이 들어가 뒤집기 어려움.">?</span></span>
             <input id="dsCalcZ" type="number" min="1" max="50" value="6" style="width:110px" />
           </label>
-          <label class="field"><span class="lbl-row">실험 횟수</span>
+          <label class="field"><span class="lbl-row" data-i18n="ds.trialsLabel">실험 횟수</span>
             <select id="dsTrials" style="width:130px">
-              <option value="2000">2,000회</option>
-              <option value="10000" selected>10,000회</option>
-              <option value="50000">50,000회</option>
+              <option value="2000" data-i18n="ds.trials2k">2,000회</option>
+              <option value="10000" selected data-i18n="ds.trials10k">10,000회</option>
+              <option value="50000" data-i18n="ds.trials50k">50,000회</option>
             </select>
           </label>
         </div>
@@ -810,27 +901,27 @@ Coinbase -> Miner : 6.25</textarea>
         <div class="ds-calc-out" id="dsCalcOut"></div>
         <div class="ds-calc-verdict" id="dsCalcVerdict"></div>
 
-        <h3 class="ds-sub">컨펌 깊이에 따른 성공 확률 (이 해시파워 기준)</h3>
+        <h3 class="ds-sub" data-i18n="ds.decayH">컨펌 깊이에 따른 성공 확률 (이 해시파워 기준)</h3>
         <div class="ds-decay" id="dsDecay"></div>
       </div>
 
       <div class="card">
         <div class="row net-controls">
-          <label class="field"><span class="lbl-row">난이도(선행 0)</span>
+          <label class="field"><span class="lbl-row" data-i18n="net.diff">난이도(선행 0)</span>
             <input id="dsDifficulty" type="number" min="1" max="5" value="3" style="width:90px" />
           </label>
-          <label class="field"><span class="lbl-row">판매자 요구 컨펌 <span class="hint" title="판매자가 결제 후 몇 개의 블록이 쌓이길 기다렸다 노트북을 보내는지. 크면 공격이 어려워집니다.">?</span></span>
-            <input id="dsConf" type="number" min="1" max="6" value="1" style="width:90px" />
+          <label class="field"><span class="lbl-row"><span data-i18n="ds.confReq">판매자 요구 컨펌</span> <span class="hint" data-i18n-attr="title:ds.confReqTip" title="판매자가 결제 후 몇 개의 블록이 쌓이길 기다렸다 노트북을 보내는지. 크면 공격이 어려워집니다. (1~20)">?</span></span>
+            <input id="dsConf" type="number" min="1" max="20" value="1" style="width:90px" />
           </label>
-          <button class="btn primary" id="dsResetBtn">초기화</button>
-          <button class="btn" id="dsScenarioBtn" title="결제 → 몰래 채굴 → 공개(reorg)로 결제가 뒤집히는 과정을 자동 재생">▶ 공격 성공 시나리오 자동 시연</button>
+          <button class="btn primary" id="dsResetBtn" data-i18n="ux.resetBtn">초기화</button>
+          <button class="btn" id="dsScenarioBtn" data-i18n="ds.scenarioBtn" data-i18n-attr="title:ds.scenarioTip" title="결제 → 몰래 채굴 → 공개(reorg)로 결제가 뒤집히는 과정을 자동 재생">▶ 공격 성공 시나리오 자동 시연</button>
         </div>
 
         <div class="ds-actions">
-          <button class="btn" id="dsPayBtn">① 노트북 결제 (공격자→판매자 10 BTC)</button>
-          <button class="btn" id="dsHonestBtn">정직한 채굴 ⛏</button>
-          <button class="btn" id="dsAttackBtn">공격자 몰래 채굴 😈</button>
-          <button class="btn danger" id="dsRevealBtn">💥 비밀 체인 공개 (reveal)</button>
+          <button class="btn" id="dsPayBtn" data-i18n="ds.payBtn">① 노트북 결제 (공격자→판매자 10 BTC)</button>
+          <button class="btn" id="dsHonestBtn" data-i18n="ds.honestBtn">정직한 채굴 ⛏</button>
+          <button class="btn" id="dsAttackBtn" data-i18n="ds.attackBtn">공격자 몰래 채굴 😈</button>
+          <button class="btn danger" id="dsRevealBtn" data-i18n="ds.revealBtn">💥 비밀 체인 공개 (reveal)</button>
         </div>
       </div>
 
@@ -841,23 +932,162 @@ Coinbase -> Miner : 6.25</textarea>
       <div class="card">
         <div class="ds-lane-wrap">
           <div class="ds-lane" id="dsPublicLane">
-            <div class="ds-lane-head"><span class="ds-lane-title good">🟢 정직한 공개 체인</span><span class="ds-lane-sub">네트워크가 인정하는 체인</span></div>
+            <div class="ds-lane-head"><span class="ds-lane-title good" data-i18n="ds.publicLane">🟢 정직한 공개 체인</span><span class="ds-lane-sub" data-i18n="ds.publicLaneSub">네트워크가 인정하는 체인</span></div>
             <div class="net-chain-scroll"><div class="net-chain" id="dsPublicChain"></div></div>
           </div>
           <div class="ds-lane" id="dsAttackerLane">
-            <div class="ds-lane-head"><span class="ds-lane-title bad">😈 공격자 비밀 체인</span><span class="ds-lane-sub" id="dsAttackerSub">공개 전까지 아무도 모름</span></div>
+            <div class="ds-lane-head"><span class="ds-lane-title bad" data-i18n="ds.attackerLane">😈 공격자 비밀 체인</span><span class="ds-lane-sub" id="dsAttackerSub" data-i18n="ds.attackerLaneSub">공개 전까지 아무도 모름</span></div>
             <div class="net-chain-scroll"><div class="net-chain" id="dsAttackerChain"></div></div>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <h2>공격 로그</h2>
+        <h2 data-i18n="ds.logH">공격 로그</h2>
         <div id="dsLog" class="net-log"></div>
       </div>
     </section>
 
-    <footer class="small muted" style="text-align:center; margin-top:30px">
+    <!-- ============================================================
+         탭 8: 양자컴퓨터 위협 총정리
+         ============================================================ -->
+    <section class="tab-panel" id="tab-quantum">
+      <div class="card">
+        <h2 data-i18n="q.introH">양자컴퓨터가 비트코인을 망하게 한다? — 케이스 총정리</h2>
+        <p class="lead" data-i18n="q.introLead">결론부터: <b>"하루아침에 붕괴"는 아니지만, 특정 조건의 코인엔 실질 위협</b>이에요. 핵심은 딱 두 알고리즘이에요 — <b>쇼어(Shor)</b>는 서명을 깨고(치명적), <b>그로버(Grover)</b>는 해시를 조금 빠르게 할 뿐(제한적). 이 사이트에서 본 <b>secp256k1 서명</b>(탭 4)이 쇼어의 표적, <b>SHA-256</b>(탭 1·2·5)이 그로버의 표적입니다.</p>
+        <div class="callout why" data-i18n="q.introWhy">양자컴퓨터의 위협은 "채굴을 빠르게 해서 51%"가 아니라, 대부분 <b>"공개키에서 개인키를 알아내 남의 코인을 훔치는"</b> 쪽이에요. 왜 그런지 아래에서 케이스별로 봅니다.</div>
+      </div>
+
+      <!-- ① 두 알고리즘 -->
+      <div class="card">
+        <h2 data-i18n="q.algoH">① 두 개의 무기: 쇼어 vs 그로버</h2>
+        <div class="q-algo-grid">
+          <div class="q-algo crit">
+            <div class="q-algo-h" data-i18n="q.shorH">쇼어 (Shor) <span class="q-badge crit">치명적</span></div>
+            <ul class="q-list">
+              <li data-i18n="q.shor1"><b>표적:</b> ECDSA / <b>secp256k1</b> (디지털 서명)</li>
+              <li data-i18n="q.shor2"><b>효과:</b> 공개키 Q에서 개인키 d를 <b>직접 역산</b> (Q = d·G를 되돌림). 사실상 불가능하던 걸 몇 시간 안에.</li>
+              <li data-i18n="q.shor3"><b>의미:</b> 공개키가 드러난 코인은 <b>서명을 위조해 훔칠 수 있음.</b></li>
+            </ul>
+          </div>
+          <div class="q-algo mid">
+            <div class="q-algo-h" data-i18n="q.groverH">그로버 (Grover) <span class="q-badge mid">제한적</span></div>
+            <ul class="q-list">
+              <li data-i18n="q.grover1"><b>표적:</b> <b>SHA-256</b> (해시 · 채굴 · 주소)</li>
+              <li data-i18n="q.grover2"><b>효과:</b> 무차별 대입을 <b>제곱근</b>만큼 단축 (2²⁵⁶ → 2¹²⁸). "보안 비트 절반" 수준.</li>
+              <li data-i18n="q.grover3"><b>의미:</b> 해시는 <b>여전히 안전권.</b> 채굴이 조금 유리해질 뿐, 붕괴 아님.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout" data-i18n="q.algoNote">💡 왜 쇼어가 무섭냐면 — 탭 4의 <b>"시계 비유"</b>처럼 d·G는 정방향(개인키→공개키)은 쉽지만 역방향(공개키→개인키)은 불가능한데, 쇼어는 바로 그 <b>역방향을 가능하게</b> 만들어요. 그로버는 그냥 "빨리 찍기"라 급이 다릅니다.</div>
+      </div>
+
+      <!-- ② 공격 케이스 -->
+      <div class="card">
+        <h2 data-i18n="q.caseH">② 공격 케이스 총정리</h2>
+        <div class="q-case-grid">
+          <div class="q-case crit">
+            <div class="q-case-h" data-i18n="q.case1H"><span class="q-num">1</span> 노출된 공개키 털기 <span class="q-badge crit">핵심 위협</span></div>
+            <div class="q-case-b">
+              <div data-i18n="q.case1a"><span class="q-k">무엇을</span> 이미 블록체인에 <b>공개키가 드러난</b> 코인의 개인키를 쇼어로 복원 → 몰래 이동</div>
+              <div data-i18n="q.case1b"><span class="q-k">대상</span> P2PK(초기 채굴 코인·<b>사토시 추정 ~110만 BTC</b>), <b>재사용 주소</b>, Taproot(P2TR)</div>
+              <div data-i18n="q.case1c"><span class="q-k">현실성</span> 대형 양자컴 필요(아직 없음). 하지만 <b>느긋하게</b> 공격 가능 → 방어 못 하는 <b>분실 코인</b>이 특히 위험</div>
+              <div data-i18n="q.case1d"><span class="q-k">방어</span> 안 쓰던 새 주소로 이동 · 주소 재사용 금지 · 포스트양자 서명 전환</div>
+            </div>
+          </div>
+
+          <div class="q-case crit">
+            <div class="q-case-h" data-i18n="q.case2H"><span class="q-num">2</span> 전송 중 거래 가로채기 <span class="q-badge crit">치명적</span></div>
+            <div class="q-case-b">
+              <div data-i18n="q.case2a"><span class="q-k">무엇을</span> 거래를 방송하면 <b>공개키+서명이 드러남</b> → 확정(컨펌) 전 짧은 틈에 개인키를 복원해, 더 높은 수수료로 <b>가로채는 거래</b>를 끼워넣어 훔침</div>
+              <div data-i18n="q.case2b"><span class="q-k">대상</span> 사용하는 <b>모든 코인</b> (돈을 쓰는 그 순간)</div>
+              <div data-i18n="q.case2c"><span class="q-k">현실성</span> <b>수 분 안에</b> secp256k1을 깨야 함 → 케이스 1보다 훨씬 빠른 양자컴 필요(더 먼 미래)</div>
+              <div data-i18n="q.case2d"><span class="q-k">방어</span> 결국 <b>서명 알고리즘 교체(PQ)</b>가 유일한 근본 해법</div>
+            </div>
+          </div>
+
+          <div class="q-case mid">
+            <div class="q-case-h" data-i18n="q.case3H"><span class="q-num">3</span> 채굴 지배 (그로버) <span class="q-badge mid">낮음</span></div>
+            <div class="q-case-b">
+              <div data-i18n="q.case3a"><span class="q-k">무엇을</span> 그로버로 해시 탐색을 가속해 채굴 우위 확보(→ 51% 시도, 탭 7)</div>
+              <div data-i18n="q.case3b"><span class="q-k">현실성</span> <b>제곱근 속도</b>라 전용 ASIC 대비 압도적이지 않음. 위협 낮음</div>
+              <div data-i18n="q.case3c"><span class="q-k">방어</span> <b>난이도 자동조정</b>이 대부분 흡수</div>
+            </div>
+          </div>
+
+          <div class="q-case low">
+            <div class="q-case-h" data-i18n="q.case4H"><span class="q-num">4</span> 해시·주소 자체 붕괴 <span class="q-badge low">사실상 없음</span></div>
+            <div class="q-case-b">
+              <div data-i18n="q.case4a"><span class="q-k">무엇을</span> SHA-256을 깨서 안 쓴 주소의 공개키 해시를 역산</div>
+              <div data-i18n="q.case4b"><span class="q-k">현실성</span> 그로버로도 2¹²⁸ → <b>현실적으로 불가능.</b> 안 쓴 P2PKH/P2WPKH는 안전</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ 위험 vs 안전 코인 -->
+      <div class="card">
+        <h2 data-i18n="q.safeH">③ 어떤 코인이 위험하고, 어떤 게 안전한가</h2>
+        <p class="lead small" data-i18n="q.safeLead">가르는 기준은 딱 하나 — <b>공개키가 체인에 드러나 있느냐.</b> 일반 주소는 공개키를 <b>해시 뒤에 숨겨</b> 두기 때문에, "한 번도 출금 안 한" 주소는 (현재로선) 안전해요.</p>
+        <div class="q-safe-grid">
+          <div class="q-safe ok">
+            <div class="q-safe-h" data-i18n="q.safeOkH">🛡️ 안전 (현재로선)</div>
+            <ul class="q-list">
+              <li data-i18n="q.safeOk1"><b>한 번도 출금 안 한</b> P2PKH / P2WPKH 주소</li>
+              <li data-i18n="q.safeOk2">이유: 공개키가 <b>SHA-256+RIPEMD-160 해시 뒤에 숨음</b> → 쇼어의 표적(공개키)이 안 보임</li>
+              <li data-i18n="q.safeOk3">뚫으려면 해시를 깨야 하는데 그건 그로버로도 불가</li>
+            </ul>
+          </div>
+          <div class="q-safe bad">
+            <div class="q-safe-h" data-i18n="q.safeBadH">⚠️ 위험</div>
+            <ul class="q-list">
+              <li data-i18n="q.safeBad1"><b>P2PK</b> — 초기 채굴 코인·사토시 코인(공개키가 그대로 노출)</li>
+              <li data-i18n="q.safeBad2"><b>재사용 주소</b> — 한 번 출금하는 순간 공개키 공개</li>
+              <li data-i18n="q.safeBad3"><b>Taproot(P2TR)</b> — 구조상 공개키 노출</li>
+              <li data-i18n="q.safeBad4"><b>쓰는 순간의 모든 코인</b> — mempool에 공개키가 뜨는 그 틈</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn" data-i18n="q.safeWarn">가장 골치 아픈 건 <b>주인이 방어할 수 없는 코인</b>이에요. 사토시 코인처럼 <b>개인키를 잃어버려 이동이 불가능한</b> 노출 공개키 코인들은, 누군가 양자컴을 갖는 순간 <b>그대로 털릴 수 있어요.</b></div>
+      </div>
+
+      <!-- ④ 현실적 가능성 -->
+      <div class="card">
+        <h2 data-i18n="q.feasH">④ 현실적으로 가능한가? — "지금 당장은 아니다"</h2>
+        <div class="q-feas-grid">
+          <div class="q-feas">
+            <div class="q-feas-k" data-i18n="q.feas1K">필요한 규모</div>
+            <div class="q-feas-v" data-i18n="q.feas1V">오류정정된 <b>논리 큐비트 수천 개</b><br><span class="muted">= 노이즈 물리 큐비트 <b>수백만~수천만 개</b>, 수 시간 연속 연산</span></div>
+          </div>
+          <div class="q-feas">
+            <div class="q-feas-k" data-i18n="q.feas2K">현재(2026) 수준</div>
+            <div class="q-feas-v" data-i18n="q.feas2V">물리 큐비트 <b>~1,000개대</b>, 노이즈 큼<br><span class="muted">오류정정 논리 큐비트는 이제 막 <b>한 자릿수</b> → 격차가 큼</span></div>
+          </div>
+          <div class="q-feas">
+            <div class="q-feas-k" data-i18n="q.feas3K">예상 시점</div>
+            <div class="q-feas-v" data-i18n="q.feas3V">대체로 <b>2030년대 중반~2040년대+</b><br><span class="muted">암호 위협 수준(CRQC), 불확실성 큼</span></div>
+          </div>
+          <div class="q-feas">
+            <div class="q-feas-k" data-i18n="q.feas4K">세상은 이미 대비 중</div>
+            <div class="q-feas-v" data-i18n="q.feas4V"><b>NIST</b>가 2024년 포스트양자 표준 확정<br><span class="muted">ML-KEM · ML-DSA · SLH-DSA</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 대응 -->
+      <div class="card">
+        <h2 data-i18n="q.fixH">⑤ 그래서 비트코인은 끝나나? — 대응책</h2>
+        <ul class="q-fix-list">
+          <li data-i18n="q.fix1"><b>포스트양자 서명으로 하드포크</b> — 격자 기반 / 해시 기반(SPHINCS⁺, Lamport 등)으로 서명 알고리즘 교체</li>
+          <li data-i18n="q.fix2"><b>취약 코인을 새(양자내성) 주소로 이동</b> — 노출된 공개키 코인을 미리 옮기기</li>
+          <li data-i18n="q.fix3"><b>주소 재사용 금지</b> — 지금도 유효한 최선의 습관 (공개키를 계속 숨김)</li>
+          <li data-i18n="q.fix4"><b>점진적 전환</b> — 양자 위협은 갑자기 오지 않고 <b>충분히 예고</b>되므로, 커뮤니티가 미리 갈아끼울 시간이 있음</li>
+        </ul>
+        <div class="callout ok" data-i18n="q.fixOk"><b>결론:</b> "양자컴 = 비트코인 즉사"는 과장이에요. 대부분은 <b>서명을 갈아끼우면 막을 수 있는</b> 문제입니다. 다만 <b>사토시 코인처럼 이동 불가능한 노출 공개키 코인</b>에는 진짜 위협이고, 그 시점엔 "누가 그 오래된 코인을 먼저 털지" 같은 초유의 사건이 벌어질 수 있어요.</div>
+      </div>
+    </section>
+
+    <footer class="small muted" style="text-align:center; margin-top:30px" data-i18n="footer.text">
       Visual Bitcoin Engine · Rust → WebAssembly · 교육용 시뮬레이터
     </footer>
   </div>
