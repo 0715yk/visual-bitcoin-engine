@@ -12,6 +12,12 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "visual-bitcoin-engine.vercel.app" }],
+      "destination": "https://howbitcoinworks.dev/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "visual-bitcoin-engine.vercel.app" }],
       "destination": "https://howbitcoinworks.dev/:path*",
