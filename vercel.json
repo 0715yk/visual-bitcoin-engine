@@ -9,5 +9,13 @@
       "source": "/pkg/(.*).wasm",
       "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "visual-bitcoin-engine.vercel.app" }],
+      "destination": "https://howbitcoinworks.dev/:path*",
+      "permanent": true
+    }
   ]
 }
