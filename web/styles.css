@@ -381,7 +381,7 @@ input[type="range"] { accent-color: var(--btc); padding: 0; }
 /* ---------- 멤풀 / 거래 ---------- */
 .tx-list { display: flex; flex-direction: column; gap: 7px; }
 .tx {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
   background: var(--bg-soft);
   border: 1px solid var(--border-soft);
   border-radius: 9px;
@@ -392,6 +392,8 @@ input[type="range"] { accent-color: var(--btc); padding: 0; }
 .tx .from { color: var(--blue); font-weight: 600; }
 .tx .to { color: var(--purple); font-weight: 600; }
 .tx .amount { margin-left: auto; font-family: var(--mono); font-weight: 700; color: var(--btc); }
+/* 조작/조작+재해시 버튼: 좁은 화면에서 글자가 세로로 쪼개지지 않도록 고정 */
+.tx button.btn.sm { flex-shrink: 0; white-space: nowrap; }
 .tx.coinbase { border-color: rgba(247,147,26,.35); background: rgba(247,147,26,.06); }
 .tx.coinbase .from { color: var(--btc); }
 .tx.tampered { border-color: var(--red); background: rgba(248,81,73,.08); }
