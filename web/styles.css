@@ -291,6 +291,11 @@ label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; 
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .row > * { flex: 0 0 auto; }
 .row .grow { flex: 1 1 120px; }
+/* 행(.row) 안의 동적 상태/안내 메시지: 길어져도 카드를 넘지 않고 줄바꿈.
+   (.row > * { flex:0 0 auto } 때문에 안 줄어들어 가로가 터지던 문제 방지) */
+#txMsg, #anMkInfo { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; }
+#powHint { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+#uMsg { min-width: 0; overflow-wrap: anywhere; }
 
 input[type="range"] { accent-color: var(--btc); padding: 0; }
 
