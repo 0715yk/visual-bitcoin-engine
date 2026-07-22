@@ -270,6 +270,317 @@ export class WasmEngine {
 }
 if (Symbol.dispose) WasmEngine.prototype[Symbol.dispose] = WasmEngine.prototype.free;
 
+/**
+ * 계정 · 컨트랙트 · 스테이킹 · Gasper 라이트를 한 핸들로 묶은 ETH 교육 엔진
+ */
+export class WasmEth {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmEthFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmeth_free(ptr, 0);
+    }
+    /**
+     * @returns {string}
+     */
+    accounts_snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_accounts_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {number} offline_fraction
+     * @returns {string}
+     */
+    advance_slot(offline_fraction) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_advance_slot(this.__wbg_ptr, offline_fraction);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * 컨트랙트 함수 호출. revert 여도 gas fee 는 나간다(실제와 동일).
+     * @param {string} address
+     * @param {string} func
+     * @param {string} args_json
+     * @param {string} caller
+     * @param {number} value_eth
+     * @param {number} priority_fee
+     * @returns {string}
+     */
+    call_contract(address, func, args_json, caller, value_eth, priority_fee) {
+        let deferred5_0;
+        let deferred5_1;
+        try {
+            const ptr0 = passStringToWasm0(address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(func, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ptr3 = passStringToWasm0(caller, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len3 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmeth_call_contract(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, value_eth, priority_fee);
+            deferred5_0 = ret[0];
+            deferred5_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    contracts_snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_contracts_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * 컨트랙트 배포. kind: "vending"|"erc20"|"pricefeed"|"insurance"
+     * args_json 은 종류별 파라미터, value_eth 는 payable constructor 예치금.
+     * @param {string} kind
+     * @param {string} deployer
+     * @param {string} args_json
+     * @param {number} value_eth
+     * @param {number} priority_fee
+     * @returns {string}
+     */
+    deploy_contract(kind, deployer, args_json, value_eth, priority_fee) {
+        let deferred4_0;
+        let deferred4_1;
+        try {
+            const ptr0 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(deployer, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmeth_deploy_contract(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, value_eth, priority_fee);
+            deferred4_0 = ret[0];
+            deferred4_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    events_snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_events_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {number} attacker_id
+     * @returns {string}
+     */
+    fork_attack(attacker_id) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_fork_attack(this.__wbg_ptr, attacker_id);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {string} label
+     * @param {number} eth
+     */
+    fund(label, eth) {
+        const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasmeth_fund(this.__wbg_ptr, ptr0, len0, eth);
+    }
+    constructor() {
+        const ret = wasm.wasmeth_new();
+        this.__wbg_ptr = ret;
+        WasmEthFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {string}
+     */
+    pos_snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_pos_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    reset() {
+        wasm.wasmeth_reset(this.__wbg_ptr);
+    }
+    /**
+     * @param {number} id
+     * @returns {string}
+     */
+    stake_activate(id) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_stake_activate(this.__wbg_ptr, id);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {string} label
+     * @param {number} eth
+     * @returns {string}
+     */
+    stake_deposit(label, eth) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmeth_stake_deposit(this.__wbg_ptr, ptr0, len0, eth);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @param {number} id
+     * @param {number} amount
+     * @returns {string}
+     */
+    stake_offline(id, amount) {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_stake_offline(this.__wbg_ptr, id, amount);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @param {number} id
+     * @param {string} reason
+     * @returns {string}
+     */
+    stake_slash(id, reason) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(reason, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmeth_stake_slash(this.__wbg_ptr, id, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    take_logs() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_take_logs(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * EIP-1559 (The Merge 이후): base fee 소각 + priority tip → 현재 헤드 제안자
+     * `priority_fee` 는 per-gas 단위(데모 스케일). base fee 는 네트워크 값(고정 데모).
+     * @param {string} from
+     * @param {string} to
+     * @param {number} eth
+     * @param {number} priority_fee
+     * @returns {string}
+     */
+    transfer(from, to, eth, priority_fee) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(from, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(to, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.wasmeth_transfer(this.__wbg_ptr, ptr0, len0, ptr1, len1, eth, priority_fee);
+            deferred3_0 = ret[0];
+            deferred3_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    validators_snapshot() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.wasmeth_validators_snapshot(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+}
+if (Symbol.dispose) WasmEth.prototype[Symbol.dispose] = WasmEth.prototype.free;
+
 export class WasmHeaderMiner {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -576,6 +887,67 @@ export function dsha256_steps(input) {
 }
 
 /**
+ * @param {string} label
+ * @returns {string}
+ */
+export function eth_address_from_label(label) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.eth_address_from_label(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} input
+ * @returns {string}
+ */
+export function eth_keccak256(input) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.eth_keccak256(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} program
+ * @param {string} calldata_dec
+ * @param {bigint} gas_limit
+ * @returns {string}
+ */
+export function evm_run(program, calldata_dec, gas_limit) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(program, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(calldata_dec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.evm_run(ptr0, len0, ptr1, len1, gas_limit);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
  * @param {string} txs_json
  * @returns {string}
  */
@@ -785,6 +1157,9 @@ const WasmDoubleSpendFinalization = (typeof FinalizationRegistry === 'undefined'
 const WasmEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmengine_free(ptr, 1));
+const WasmEthFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_wasmeth_free(ptr, 1));
 const WasmHeaderMinerFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_wasmheaderminer_free(ptr, 1));

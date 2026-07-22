@@ -14,6 +14,7 @@ pub mod attack;
 pub mod block;
 pub mod blockchain;
 pub mod config;
+pub mod eth;
 pub mod header;
 pub mod merkle;
 pub mod network;

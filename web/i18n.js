@@ -11,6 +11,8 @@
 // 긴 교육용 본문은 점진적으로 키를 추가해 번역을 채운다.
 // (키가 없는 요소는 한국어 원문이 그대로 보이므로 사이트가 깨지지 않는다.)
 
+import { ETH_I18N } from "./eth/eth-i18n.js";
+
 export const SUPPORTED = ["ko", "en", "ja", "es", "fr", "de"];
 const DEFAULT_LANG = "ko";
 const STORAGE_KEY = "vbe-lang";
@@ -22,7 +24,7 @@ const T = {
   ko: {
     "meta.title": "Visual Bitcoin Engine — 비트코인 원리 인터랙티브 시뮬레이터",
     "meta.description":
-      "Rust와 WebAssembly로 만든 인터랙티브 비트코인 학습 도구. SHA-256 해시, 채굴(작업증명), UTXO, 디지털 서명, 블록체인, P2P 합의, 이중지불·양자컴퓨터 위협까지 직접 만져보며 배웁니다.",
+      "Rust와 WebAssembly로 만든 인터랙티브 비트코인·이더리움 PoS 학습 도구. SHA-256·채굴·UTXO·서명·P2P와 계정·스테이킹·Gasper 합의까지 직접 만져보며 배웁니다.",
     "meta.keywords":
       "비트코인, 블록체인, 비트코인 원리, SHA-256, 작업증명, 채굴, UTXO, 디지털 서명, 이중지불, 양자컴퓨터, 암호화폐, 시뮬레이터, WebAssembly, Rust",
     "meta.ogTitle": "Visual Bitcoin Engine — 비트코인이 어떻게 작동하는지 직접 만져보는 시뮬레이터",
@@ -211,11 +213,13 @@ const T = {
     "js.dsShipped": "📦 발송함 (되돌릴 수 없음)",
     "js.dsWaiting": "대기 중",
     "js.dsStatLen": "체인 길이 · 공개 vs 공격자",
+    "ux.poolEmpty": "아직 UTXO가 없습니다. ①에서 코인을 발행해 보세요.",
+    "ux.walletEmpty": "아직 지갑이 없습니다. 아래 ①에서 코인을 발행하면 키쌍이 생겨요.",
   },
   en: {
     "meta.title": "Visual Bitcoin Engine — Interactive Bitcoin Simulator",
     "meta.description":
-      "Interactive Bitcoin learning tool built with Rust and WebAssembly. Explore SHA-256 hashing, proof-of-work mining, UTXO, digital signatures, blockchain, P2P consensus, double-spend and quantum-computer threats — hands-on.",
+      "Interactive Bitcoin & Ethereum PoS learning tool in Rust/WebAssembly. Explore PoW mining, UTXO, signatures, P2P — and accounts, staking, Gasper-lite consensus — hands-on.",
     "meta.keywords":
       "bitcoin, blockchain, how bitcoin works, SHA-256, proof of work, mining, UTXO, digital signature, double spend, quantum computer, cryptocurrency, simulator, WebAssembly, Rust",
     "meta.ogTitle": "Visual Bitcoin Engine — A hands-on simulator for how Bitcoin really works",
@@ -405,6 +409,15 @@ const T = {
     "ux.curveLg5": "vertical flip",
     "ux.curveKey": "<b>🔑 Here's the point:</b> jumping <b>d times from G to reach Q</b> is easy (just press the button d times). But <b>looking only at the landing point Q and figuring out \"how many jumps?\" (= d) is impossible</b> — the jumps bounce wildly across the curve, so there's no way to retrace them backwards.<ul class=\"tight\" style=\"margin:8px 0 2px\"><li><b>Private key d</b> = number of jumps <span class=\"muted\">(secret)</span></li><li><b>Public key Q</b> = landing point <span class=\"muted\">(public · = the point G added d times)</span></li><li><b>Address</b> = hash of the public key Q</li></ul>A real Bitcoin private key is a landing point after roughly <b>2<sup>256</sup></b> jumps (more than the atoms in the universe), so even every supercomputer combined can't retrace it. That's why publishing your public key is safe.",
     "ux.curveSig": "<b>So what's a \"signature\"?</b> It's a mathematical trick that proves \"I know the <b>jump count d</b> that produced this landing point Q\" — <b>without ever revealing d</b>. Others just <b>check (verify) the proof with the public key Q</b>. → Without the private key you can't produce a signature, and any signature can be verified by anyone with the public key. (This actually runs in the signature block below when you send coins.)",
+    "ux.genH": "Making a wallet at a glance — and what's the same vs different from Ethereum",
+    "ux.genLead": "The \"jump\" picture above is exactly <b>step ② (private→public)</b>. End to end it's <b>random number (private key) → elliptic-curve multiply → public key → hash → address</b>. Ethereum uses the <b>same secp256k1 curve</b>, so ① and ② are identical; <b>only the hash function for the address differs</b>.",
+    "ux.genCol1": "Step",
+    "ux.genCol2": "Bitcoin",
+    "ux.genCol3": "Ethereum",
+    "ux.genRows": "<tr><td class=\"k\">① Private key</td><td>256-bit <b>random</b></td><td>256-bit <b>random</b> <span class=\"same\">same</span></td></tr><tr><td class=\"k\">② Public key</td><td class=\"mono\">privkey × G (secp256k1)</td><td class=\"mono\">privkey × G <span class=\"same\">same curve</span></td></tr><tr><td class=\"k\">③ Address</td><td class=\"mono\">RIPEMD160(SHA256(pub)) → Base58</td><td class=\"mono\">Keccak256(pub) last 20B → 0x… <span class=\"diff\">hash differs</span></td></tr><tr><td class=\"k\">Signature</td><td>ECDSA (secp256k1)</td><td>ECDSA <span class=\"same\">same</span></td></tr><tr><td class=\"k\">Seed phrase</td><td>BIP-39 (12/24 words)</td><td>BIP-39 <span class=\"same\">same</span></td></tr><tr><td class=\"k\">Account path</td><td class=\"mono\">m/44'/0'/…</td><td class=\"mono\">m/44'/60'/… <span class=\"diff\">number only</span></td></tr><tr><td class=\"k\">Where stored</td><td>wallet.dat · hardware chip</td><td>browser ext (encrypted) · hardware chip</td></tr>",
+    "ux.genKey": "<b>🔑 Key point:</b> the <b>fundamentals (keys, signatures, seed) are nearly identical on both chains.</b> That's why <b>one hardware wallet can manage both BTC and ETH</b>. The visible difference is basically just the <b>address encoding (the hash)</b>.",
+    "ux.genStoreH": "Where is the private key stored? · seed phrase · where signing happens",
+    "ux.genStore": "<p><b>The private key is not on the blockchain.</b> The chain only holds UTXOs, addresses, transactions, and signatures. The private key lives <b>only in your wallet</b> — nodes never see it (if they did, anyone could steal your funds).</p><ul class=\"tight\"><li><b>Bitcoin Core</b> — kept in a <code>wallet.dat</code> file (can be encrypted).</li><li><b>Hardware wallet (Ledger·Trezor)</b> — locked inside a secure chip, <b>never leaves the device</b>; signing happens on-device.</li><li><b>Seed phrase (12 words)</b> — the <b>seed</b> for all your private keys. It alone recovers every account → leak it and everything is gone.</li></ul><p><b>Signing happens \"inside your device.\"</b> The wallet signs the transaction locally with the private key → only the <b>signature + tx</b> go to the chain → nodes <b>only verify with the public key</b>. The \"sign = only me, verify = anyone\" asymmetry. (Ethereum works exactly the same way.)</p>",
     "ux.fundH": "① Mint coins (coinbase)",
     "ux.fundLead": "You need UTXOs before you can send. First, create new coins for someone.",
     "ux.fundAddr": "Receiving address",
@@ -3118,6 +3131,12 @@ const T = {
     "log.aShip": "[VERKÄUFER 📦] Zahlung mit {n} Bestätigungen → Laptop versendet! (in der realen Welt unumkehrbar)",
   },
 };
+
+// HowEthereumWorks 키 병합 (ko/en 우선; 다른 언어는 ko 폴백)
+for (const [lang, keys] of Object.entries(ETH_I18N)) {
+  if (!T[lang]) T[lang] = {};
+  Object.assign(T[lang], keys);
+}
 
 let current = DEFAULT_LANG;
 

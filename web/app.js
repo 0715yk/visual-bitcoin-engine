@@ -10,6 +10,7 @@ import init, {
   WasmHeaderMiner,
   WasmNetwork,
   WasmDoubleSpend,
+  WasmEth,
   sha256,
   pow_try,
   pow_preimage,
@@ -17,8 +18,12 @@ import init, {
   dsha256_steps,
   dbl_spend_probability,
   dbl_spend_simulate,
+  eth_keccak256,
+  eth_address_from_label,
+  evm_run,
 } from "./pkg/visual_bitcoin_engine.js";
 import { initI18n, t, applyI18n, getLang } from "./i18n.js";
+import { setupEth, refreshEth } from "./eth/eth-app.js";
 
 // ---------- 작은 도우미들 ----------
 const $ = (id) => document.getElementById(id);
@@ -554,19 +559,133 @@ function enhanceSelects(root = document) {
   root.querySelectorAll("select").forEach(enhanceSelect);
 }
 
-$("tabs").addEventListener("click", (e) => {
-  const btn = e.target.closest(".tab-btn");
-  if (!btn) return;
-  const tab = btn.dataset.tab;
-  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
-  document.querySelectorAll(".tab-panel").forEach((p) =>
-    p.classList.toggle("active", p.id === `tab-${tab}`)
+// ---------- Bitcoin / Ethereum 체인 스위처 ----------
+const CHAIN_KEY = "vbe-chain";
+let currentChain = "btc";
+
+function pickInitialChain() {
+  const q = new URLSearchParams(location.search).get("chain");
+  if (q === "eth" || q === "btc") return q;
+  const saved = localStorage.getItem(CHAIN_KEY);
+  if (saved === "eth" || saved === "btc") return saved;
+  return "btc";
+}
+
+function applyChain(chain, { persist = true, updateUrl = true } = {}) {
+  currentChain = chain === "eth" ? "eth" : "btc";
+  if (persist) localStorage.setItem(CHAIN_KEY, currentChain);
+  if (updateUrl) {
+    const url = new URL(location.href);
+    url.searchParams.set("chain", currentChain);
+    history.replaceState(null, "", url);
+  }
+
+  document.body.dataset.chain = currentChain;
+  $("tabsBtc").hidden = currentChain !== "btc";
+  $("tabsEth").hidden = currentChain !== "eth";
+  document.querySelectorAll(".chain-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.chain === currentChain)
   );
-});
+
+  // 로고·타이틀·태그라인
+  // ETH: Ξ(세 줄)가 아니라 공식 마크에 가까운 다이아몬드(八角) SVG
+  const ETH_DIAMOND_SVG = `<svg class="eth-diamond" viewBox="0 0 256 417" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <path fill="#fff" fill-opacity=".7" d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z"/>
+    <path fill="#fff" d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
+    <path fill="#fff" fill-opacity=".7" d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z"/>
+    <path fill="#fff" d="M127.962 416.905v-104.72L0 236.585z"/>
+    <path fill="#fff" fill-opacity=".4" d="M127.961 287.958l127.96-75.637-127.96-58.162z"/>
+    <path fill="#fff" fill-opacity=".6" d="M0 212.321l127.96 75.637v-133.8z"/>
+  </svg>`;
+  const logo = $("chainLogo");
+  const title = $("chainTitle");
+  const tag = $("chainTagline");
+  const footer = $("footerText");
+  if (currentChain === "eth") {
+    if (logo) {
+      logo.innerHTML = ETH_DIAMOND_SVG;
+      logo.classList.add("eth");
+    }
+    if (title) title.textContent = t("eth.header.title");
+    if (tag) {
+      tag.removeAttribute("data-i18n");
+      tag.innerHTML = t("eth.header.tagline");
+    }
+    document.title = t("eth.meta.title");
+    if (footer) {
+      footer.removeAttribute("data-i18n");
+      footer.textContent = t("eth.footer.text");
+    }
+  } else {
+    if (logo) {
+      logo.textContent = "₿";
+      logo.classList.remove("eth");
+    }
+    if (title) title.textContent = "Visual Bitcoin Engine";
+    if (tag) {
+      tag.setAttribute("data-i18n", "header.tagline");
+      tag.innerHTML = t("header.tagline");
+    }
+    document.title = t("meta.title");
+    if (footer) {
+      footer.setAttribute("data-i18n", "footer.text");
+      footer.textContent = t("footer.text");
+    }
+  }
+
+  // 패널: 현재 체인의 활성 탭만 표시
+  document.querySelectorAll(".tab-panel").forEach((p) => {
+    const isChain = p.dataset.chain === currentChain;
+    if (!isChain) {
+      p.classList.remove("active");
+      return;
+    }
+  });
+  const nav = currentChain === "eth" ? $("tabsEth") : $("tabsBtc");
+  let activeBtn = nav.querySelector(".tab-btn.active");
+  if (!activeBtn) activeBtn = nav.querySelector(".tab-btn");
+  if (activeBtn) {
+    nav.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === activeBtn));
+    const tab = activeBtn.dataset.tab;
+    document.querySelectorAll(`.tab-panel[data-chain="${currentChain}"]`).forEach((p) =>
+      p.classList.toggle("active", p.id === `tab-${tab}`)
+    );
+  }
+
+  if (currentChain === "eth") refreshEth();
+}
+
+function setupChainSwitch() {
+  currentChain = pickInitialChain();
+  $("chainSwitch")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".chain-btn");
+    if (!btn) return;
+    applyChain(btn.dataset.chain);
+  });
+  applyChain(currentChain, { persist: true, updateUrl: true });
+}
+
+function bindTabNav(navId) {
+  $(navId)?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    const tab = btn.dataset.tab;
+    const nav = $(navId);
+    nav.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    const chain = navId === "tabsEth" ? "eth" : "btc";
+    document.querySelectorAll(`.tab-panel[data-chain="${chain}"]`).forEach((p) =>
+      p.classList.toggle("active", p.id === `tab-${tab}`)
+    );
+  });
+}
 
 // 다국어 초기화 (엔진 로딩과 무관하게 즉시 적용). 언어 변경 시 엔진 상태 문구도 갱신.
 initI18n();
+bindTabNav("tabsBtc");
+bindTabNav("tabsEth");
+setupChainSwitch();
 document.addEventListener("i18n:changed", () => {
+  applyChain(currentChain, { persist: false, updateUrl: false });
   const badge = $("engineBadge");
   const st = $("engineStatus");
   if (!badge || !st) return;
@@ -597,6 +716,7 @@ init()
     setupAnatomy();
     setupNetwork();
     setupDoubleSpend();
+    setupEth(WasmEth, eth_keccak256, eth_address_from_label, evm_run);
 
     // 언어 전환 시 t()로 그려진 동적 UI를 현재 상태 그대로 다시 렌더
     document.addEventListener("i18n:changed", () => {

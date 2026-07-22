@@ -738,3 +738,418 @@ pub fn dbl_spend_probability(q_percent: f64, z: u32) -> f64 {
 pub fn dbl_spend_simulate(q_percent: f64, z: u32, trials: u32) -> f64 {
     crate::attack::simulate(q_percent / 100.0, z, trials)
 }
+
+// ============================================================
+// Ethereum PoS 교육 엔진 (HowEthereumWorks)
+// ============================================================
+
+use crate::eth::account::{AccountLedger, UNIT_PER_ETH};
+use crate::eth::consensus::PosChain;
+use crate::eth::contract::{call_gas, deploy_gas, ContractRegistry};
+use crate::eth::keccak::{address_from_label, keccak256_str};
+
+#[wasm_bindgen]
+pub fn eth_keccak256(input: &str) -> String {
+    keccak256_str(input)
+}
+
+#[wasm_bindgen]
+pub fn eth_address_from_label(label: &str) -> String {
+    address_from_label(label)
+}
+
+// ----- 미니 EVM 실행기 (opcode 스텝 뷰어) -----
+// program: "store" | "arith" | "escrow".
+// calldata_dec: store=v, escrow=price(ETH 단위 정수). gas_limit: gas 예산(BigInt).
+// 반환: 바이트코드·디스어셈블·매 스텝 스냅샷(스택/메모리/스토리지/gas)이 담긴 JSON.
+#[wasm_bindgen]
+pub fn evm_run(program: &str, calldata_dec: &str, gas_limit: u64) -> String {
+    let calldata: u128 = calldata_dec.trim().parse().unwrap_or(0);
+    let limit = if gas_limit == 0 { 100_000 } else { gas_limit };
+    let r = crate::eth::evm::run(program, calldata, limit);
+    serde_json::to_string(&r).unwrap_or_else(|_| "{}".into())
+}
+
+/// 데모 base fee (per-gas, 내부 단위). 실제 메인넷은 블록마다 변동.
+const ETH_BASE_FEE_PER_GAS: u64 = 10;
+
+/// 계정 · 컨트랙트 · 스테이킹 · Gasper 라이트를 한 핸들로 묶은 ETH 교육 엔진
+#[wasm_bindgen]
+pub struct WasmEth {
+    accounts: AccountLedger,
+    pos: PosChain,
+    contracts: ContractRegistry,
+}
+
+#[wasm_bindgen]
+impl WasmEth {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> WasmEth {
+        let mut eth = WasmEth {
+            accounts: AccountLedger::new(),
+            pos: PosChain::new(),
+            contracts: ContractRegistry::new(),
+        };
+        // 제네시스 ERC-20: Faucet 이 The Sandbox 스타일 SAND 를 배포하고 Alice/Bob 에 나눠준다
+        let faucet_addr = eth.accounts.address_of("Faucet");
+        let args = serde_json::json!({ "name": "SAND", "supply": 1200.0 });
+        if let Ok(addr) = eth
+            .contracts
+            .deploy("erc20", "Faucet", &faucet_addr, 0, &args, 0)
+        {
+            let _ = eth.contracts.call(
+                &addr,
+                "transfer",
+                &serde_json::json!({ "to": "Alice", "amount": 1000.0 }),
+                "Faucet",
+                0,
+            );
+            let _ = eth.contracts.call(
+                &addr,
+                "transfer",
+                &serde_json::json!({ "to": "Bob", "amount": 200.0 }),
+                "Faucet",
+                0,
+            );
+        }
+        // 제네시스 PriceFeed: Oracles 탭에서 바로 report 해볼 수 있게
+        let _ = eth.contracts.deploy(
+            "pricefeed",
+            "Faucet",
+            &faucet_addr,
+            1,
+            &serde_json::json!({ "name": "ETH/USD Feed" }),
+            0,
+        );
+        // oracle 노드도 gas fee 를 내야 하므로 약간의 ETH 지급
+        for node in ["Binance", "Bybit", "Coinbase"] {
+            eth.accounts.fund(node, 1.0);
+        }
+        eth
+    }
+
+    fn current_proposer(&self) -> String {
+        self.pos
+            .snapshot()
+            .last_proposer
+            .filter(|s| !s.is_empty() && s != "—")
+            .or_else(|| {
+                self.pos
+                    .staking()
+                    .active_ids()
+                    .first()
+                    .map(|&id| self.pos.staking().label_of(id))
+            })
+            .unwrap_or_else(|| "Val-A".into())
+    }
+
+    // ----- 계정 -----
+    pub fn fund(&mut self, label: &str, eth: f64) {
+        self.accounts.fund(label, eth);
+    }
+
+    /// EIP-1559 (The Merge 이후): base fee 소각 + priority tip → 현재 헤드 제안자
+    /// `priority_fee` 는 per-gas 단위(데모 스케일). base fee 는 네트워크 값(고정 데모).
+    pub fn transfer(&mut self, from: &str, to: &str, eth: f64, priority_fee: f64) -> String {
+        let tip = priority_fee.max(0.0) as u64;
+        let proposer = self.current_proposer();
+        let r = self
+            .accounts
+            .transfer(from, to, eth, ETH_BASE_FEE_PER_GAS, tip, &proposer);
+        serde_json::to_string(&r).unwrap_or_else(|_| "{}".into())
+    }
+
+    pub fn accounts_snapshot(&self) -> String {
+        let accounts = self.accounts.snapshot();
+        let mut enriched = Vec::new();
+        for a in accounts {
+            enriched.push(serde_json::json!({
+                "label": a.label,
+                "address": a.address,
+                "balanceEth": a.balance_wei as f64 / UNIT_PER_ETH as f64,
+                "nonce": a.nonce,
+            }));
+        }
+        serde_json::json!({ "accounts": enriched, "unitPerEth": UNIT_PER_ETH }).to_string()
+    }
+
+    // ----- 스마트 컨트랙트 -----
+
+    /// 컨트랙트 배포. kind: "vending"|"erc20"|"pricefeed"|"insurance"
+    /// args_json 은 종류별 파라미터, value_eth 는 payable constructor 예치금.
+    pub fn deploy_contract(
+        &mut self,
+        kind: &str,
+        deployer: &str,
+        args_json: &str,
+        value_eth: f64,
+        priority_fee: f64,
+    ) -> String {
+        let args: serde_json::Value =
+            serde_json::from_str(args_json).unwrap_or(serde_json::json!({}));
+        let value_wei = (value_eth.max(0.0) * UNIT_PER_ETH as f64).round() as u64;
+        let tip_per_gas = priority_fee.max(0.0) as u64;
+        let gas = deploy_gas(kind);
+        let proposer = self.current_proposer();
+
+        // 잔액 선검사 (배포 롤백 방지)
+        let burn = gas * ETH_BASE_FEE_PER_GAS;
+        let tip = gas * tip_per_gas;
+        let need = value_wei + burn + tip;
+        if self.accounts.balance_wei_of(deployer) < need {
+            return serde_json::json!({
+                "ok": false,
+                "error": format!(
+                    "잔액 부족: 배포에 value {:.6} + gas fee {:.6} ETH 필요",
+                    value_wei as f64 / UNIT_PER_ETH as f64,
+                    (burn + tip) as f64 / UNIT_PER_ETH as f64
+                )
+            })
+            .to_string();
+        }
+
+        let deployer_addr = self.accounts.address_of(deployer);
+        let nonce = self.accounts.nonce_of(deployer);
+        match self
+            .contracts
+            .deploy(kind, deployer, &deployer_addr, nonce, &args, value_wei)
+        {
+            Ok(address) => {
+                let (used_nonce, burn, tip) = self
+                    .accounts
+                    .apply_contract_tx(
+                        deployer,
+                        value_wei,
+                        gas,
+                        ETH_BASE_FEE_PER_GAS,
+                        tip_per_gas,
+                        &proposer,
+                        true,
+                    )
+                    .expect("prechecked balance");
+                serde_json::json!({
+                    "ok": true,
+                    "address": address,
+                    "kind": kind,
+                    "deployer": deployer,
+                    "nonce": used_nonce,
+                    "gas_used": gas,
+                    "base_fee_burned_eth": burn as f64 / UNIT_PER_ETH as f64,
+                    "tip_eth": tip as f64 / UNIT_PER_ETH as f64,
+                    "value_eth": value_wei as f64 / UNIT_PER_ETH as f64,
+                    "proposer": proposer,
+                })
+                .to_string()
+            }
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    /// 컨트랙트 함수 호출. revert 여도 gas fee 는 나간다(실제와 동일).
+    pub fn call_contract(
+        &mut self,
+        address: &str,
+        func: &str,
+        args_json: &str,
+        caller: &str,
+        value_eth: f64,
+        priority_fee: f64,
+    ) -> String {
+        let args: serde_json::Value =
+            serde_json::from_str(args_json).unwrap_or(serde_json::json!({}));
+        let value_wei = (value_eth.max(0.0) * UNIT_PER_ETH as f64).round() as u64;
+        let tip_per_gas = priority_fee.max(0.0) as u64;
+        let proposer = self.current_proposer();
+
+        // 잔액 선검사: value + 최대 gas fee
+        let kind = self.contracts.kind_of(address).unwrap_or_default();
+        let gas = call_gas(&kind, func);
+        let need = value_wei + gas * (ETH_BASE_FEE_PER_GAS + tip_per_gas);
+        if self.accounts.balance_wei_of(caller) < need {
+            return serde_json::json!({
+                "ok": false,
+                "error": format!(
+                    "잔액 부족: value + gas fee 로 {:.6} ETH 필요",
+                    need as f64 / UNIT_PER_ETH as f64
+                )
+            })
+            .to_string();
+        }
+
+        match self.contracts.call(address, func, &args, caller, value_wei) {
+            Ok(o) => {
+                let (nonce, burn, tip) = self
+                    .accounts
+                    .apply_contract_tx(
+                        caller,
+                        value_wei,
+                        o.gas_used,
+                        ETH_BASE_FEE_PER_GAS,
+                        tip_per_gas,
+                        &proposer,
+                        true,
+                    )
+                    .expect("prechecked balance");
+                for (label, wei) in &o.payouts {
+                    self.accounts.credit_wei(label, *wei);
+                }
+                serde_json::json!({
+                    "ok": true,
+                    "reverted": false,
+                    "note": o.note,
+                    "func": func,
+                    "caller": caller,
+                    "nonce": nonce,
+                    "gas_used": o.gas_used,
+                    "base_fee_burned_eth": burn as f64 / UNIT_PER_ETH as f64,
+                    "tip_eth": tip as f64 / UNIT_PER_ETH as f64,
+                    "value_eth": value_wei as f64 / UNIT_PER_ETH as f64,
+                    "proposer": proposer,
+                    "events": o.events,
+                    "payouts": o.payouts.iter().map(|(l, w)| serde_json::json!({
+                        "to": l, "eth": *w as f64 / UNIT_PER_ETH as f64
+                    })).collect::<Vec<_>>(),
+                })
+                .to_string()
+            }
+            Err(rv) => {
+                // revert: value 는 안 나가고 gas fee 만 차감, nonce 는 소모
+                let applied = self.accounts.apply_contract_tx(
+                    caller,
+                    0,
+                    rv.gas_used,
+                    ETH_BASE_FEE_PER_GAS,
+                    tip_per_gas,
+                    &proposer,
+                    false,
+                );
+                let (burn, tip) = applied
+                    .map(|(_, b, t)| (b, t))
+                    .unwrap_or((0, 0));
+                serde_json::json!({
+                    "ok": false,
+                    "reverted": true,
+                    "error": rv.reason,
+                    "func": func,
+                    "caller": caller,
+                    "gas_used": rv.gas_used,
+                    "base_fee_burned_eth": burn as f64 / UNIT_PER_ETH as f64,
+                    "tip_eth": tip as f64 / UNIT_PER_ETH as f64,
+                    "proposer": proposer,
+                })
+                .to_string()
+            }
+        }
+    }
+
+    pub fn contracts_snapshot(&self) -> String {
+        let list: Vec<_> = self
+            .contracts
+            .snapshot()
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "address": c.address,
+                    "kind": c.kind,
+                    "name": c.name,
+                    "deployer": c.deployer,
+                    "createdNonce": c.created_nonce,
+                    "balanceEth": c.balance_wei as f64 / UNIT_PER_ETH as f64,
+                    "storage": c.storage,
+                })
+            })
+            .collect();
+        serde_json::to_string(&list).unwrap_or_else(|_| "[]".into())
+    }
+
+    pub fn events_snapshot(&self) -> String {
+        serde_json::to_string(self.contracts.events()).unwrap_or_else(|_| "[]".into())
+    }
+
+    // ----- 스테이킹 -----
+    pub fn stake_deposit(&mut self, label: &str, eth: f64) -> String {
+        match self.pos.staking_mut().deposit(label, eth) {
+            Ok(id) => serde_json::json!({ "ok": true, "id": id }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    pub fn stake_activate(&mut self, id: u32) -> String {
+        match self.pos.staking_mut().activate(id) {
+            Ok(()) => serde_json::json!({ "ok": true }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    pub fn stake_slash(&mut self, id: u32, reason: &str) -> String {
+        match self.pos.staking_mut().slash(id, reason, 0.05) {
+            Ok(()) => serde_json::json!({ "ok": true }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    pub fn stake_offline(&mut self, id: u32, amount: f64) -> String {
+        match self.pos.staking_mut().inactivity_penalty(id, amount) {
+            Ok(()) => serde_json::json!({ "ok": true }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    pub fn validators_snapshot(&self) -> String {
+        serde_json::to_string(&self.pos.staking().snapshot()).unwrap_or_else(|_| "[]".into())
+    }
+
+    // ----- 합의 -----
+    pub fn advance_slot(&mut self, offline_fraction: f64) -> String {
+        let root = self.compute_state_root();
+        match self.pos.advance_slot(offline_fraction, &root) {
+            Ok(msg) => serde_json::json!({ "ok": true, "message": msg }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    /// 교육용 stateRoot: 모든 계정(잔액·nonce) + 모든 컨트랙트(잔액·storage)를
+    /// 정렬된 문자열로 직렬화해 keccak 한 지문. 진짜 Merkle-Patricia trie 는 아니다.
+    fn compute_state_root(&self) -> String {
+        let mut s = String::new();
+        for a in self.accounts.snapshot() {
+            s.push_str(&format!("{}|{}|{};", a.label, a.balance_wei, a.nonce));
+        }
+        for c in self.contracts.snapshot() {
+            s.push_str(&format!("{}|{}|", c.address, c.balance_wei));
+            for (k, v) in &c.storage {
+                s.push_str(&format!("{}={},", k, v));
+            }
+            s.push(';');
+        }
+        keccak256_str(&s)
+    }
+
+    pub fn fork_attack(&mut self, attacker_id: u32) -> String {
+        match self.pos.fork_attack(attacker_id) {
+            Ok(msg) => serde_json::json!({ "ok": true, "message": msg }).to_string(),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }).to_string(),
+        }
+    }
+
+    pub fn pos_snapshot(&self) -> String {
+        serde_json::to_string(&self.pos.snapshot()).unwrap_or_else(|_| "{}".into())
+    }
+
+    pub fn reset(&mut self) {
+        *self = WasmEth::new();
+    }
+
+    pub fn take_logs(&mut self) -> String {
+        let mut logs = self.accounts.drain_logs();
+        logs.append(&mut self.contracts.drain_logs());
+        logs.append(&mut self.pos.drain_logs());
+        serde_json::to_string(&logs).unwrap_or_else(|_| "[]".into())
+    }
+}
+
+impl Default for WasmEth {
+    fn default() -> Self {
+        Self::new()
+    }
+}

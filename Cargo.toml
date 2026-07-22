@@ -15,8 +15,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # SHA-256 해시를 만들어주는 라이브러리 (비트코인도 SHA-256을 사용한다)
 sha2 = "0.10"
+# Keccak-256 — 이더리움 주소·해시 교육용 (NIST SHA-3와 패딩이 다름)
+sha3 = "0.10"
 # 엔진 데이터를 JS(브라우저)로 넘길 때 JSON으로 직렬화하기 위한 라이브러리
 serde = { version = "1", features = ["derive"] }
+# 스냅샷/컨트랙트 인자 JSON (eth 컨트랙트 엔진이 네이티브 테스트에서도 사용)
+serde_json = "1"
 # secp256k1 타원곡선 ECDSA — 비트코인이 쓰는 바로 그 디지털 서명
 k256 = { version = "0.13", features = ["ecdsa"] }
 # 안전한 난수 (개인키 생성용). 브라우저에서는 아래 wasm 설정의 "js" 기능으로 동작.
@@ -37,6 +41,5 @@ rand = "0.8"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"   # Rust <-> JavaScript 다리
 js-sys = "0.3"         # 브라우저의 Date.now() 등 JS 표준 객체 사용
-serde_json = "1"       # 스냅샷을 JSON 문자열로 변환
 # 브라우저에는 OS 난수가 없으므로, getrandom이 JS의 crypto.getRandomValues를 쓰게 한다.
 getrandom = { version = "0.2", features = ["js"] }
