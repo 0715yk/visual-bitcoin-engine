@@ -2182,3 +2182,194 @@ body[data-chain="btc"] .cmp-table td:nth-child(2) { background: rgba(247, 147, 2
 .ec-meta { font-size: 11.5px; }
 .ec-msg { font-size: 13px; margin-top: 2px; color: var(--text); }
 .ec-tree { font-size: 11px; margin-top: 2px; overflow-wrap: anywhere; }
+
+/* ============ 탭 9: 마무리 (릴레이 총정리) ============ */
+.wrap-hero { border-color: rgba(98,126,234,.4); background: linear-gradient(180deg, rgba(98,126,234,.08), var(--bg-soft)); }
+.wrap-hero h2 em { font-style: normal; color: #8b9cff; }
+.wrap-oneline {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-top: 12px; font-size: 12.5px;
+}
+.wrap-oneline .wo-a, .wrap-oneline .wo-b {
+  padding: 8px 12px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--bg-soft); line-height: 1.4;
+}
+.wrap-oneline .wo-a { color: var(--muted); }
+.wrap-oneline .wo-b { color: var(--text); border-color: rgba(98,126,234,.45); background: rgba(98,126,234,.08); flex: 1 1 260px; }
+.wrap-oneline .wo-arrow { color: #8b9cff; font-weight: 700; }
+
+.wr-hl-block { color: #8b9cff; }
+
+/* 릴레이 트랙 */
+.wrap-relay {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;
+  margin: 6px 0 14px; padding: 14px; border-radius: 12px;
+  background: #0b1020; border: 1px solid var(--border);
+}
+.wr-slot {
+  flex: 1 1 190px; min-width: 180px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.wr-slot.bad { border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.05); }
+.wr-slot-hd { display: flex; align-items: baseline; justify-content: space-between; }
+.wr-slot-n { font-weight: 800; font-size: 13px; color: #8b9cff; }
+.wr-slot-t { font-size: 11px; color: var(--muted); }
+.wr-proposer {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  background: rgba(98,126,234,.1); border: 1px solid rgba(98,126,234,.4); color: var(--text);
+}
+.wr-slot.bad .wr-proposer { background: rgba(248,81,73,.1); border-color: rgba(248,81,73,.4); }
+.wr-proposer small { font-size: 10.5px; font-weight: 600; color: var(--muted); }
+.wr-baton {
+  padding: 8px 10px; border-radius: 8px; text-align: center; font-size: 12px; font-weight: 700;
+  background: rgba(227,179,65,.12); border: 1px dashed rgba(227,179,65,.5); color: var(--yellow);
+  line-height: 1.5;
+}
+.wr-baton .mono { display: block; font-size: 10.5px; font-weight: 600; opacity: .9; }
+.wr-baton.bad { background: rgba(248,81,73,.12); border-color: rgba(248,81,73,.5); color: var(--red); }
+.wr-attest { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.wr-vote {
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid transparent;
+}
+.wr-vote.ok { color: var(--green); background: rgba(63,185,80,.1); border-color: rgba(63,185,80,.35); }
+.wr-vote.no { color: var(--red); background: rgba(248,81,73,.1); border-color: rgba(248,81,73,.35); }
+.wr-vote-sum { font-size: 11px; font-weight: 700; color: var(--muted); flex: 1 1 100%; }
+.wr-vote-sum.bad { color: var(--red); }
+
+.wr-pass { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 44px; }
+.wr-pass-arrow { font-size: 26px; color: #8b9cff; line-height: 1; }
+.wr-pass-lbl { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.2; }
+
+/* epoch 진행바 */
+.wrap-epoch { margin: 0 0 14px; }
+.we-bar { height: 10px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); overflow: hidden; }
+.we-fill { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, rgba(98,126,234,.25), #627eea 70%, var(--green)); }
+.we-labels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.we-mark { font-weight: 700; color: #8b9cff; }
+.we-mark.fin { color: var(--green); }
+
+/* Web2 vs Web3 */
+.wrap-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0 12px; }
+@media (max-width: 640px) { .wrap-vs { grid-template-columns: 1fr; } .wrap-oneline { font-size: 12px; } }
+.wv-col { border-radius: 12px; padding: 12px 14px; border: 1px solid var(--border); background: var(--bg-soft); }
+.wv-col.web2 { border-color: var(--border); }
+.wv-col.web3 { border-color: rgba(98,126,234,.45); background: rgba(98,126,234,.06); }
+.wv-hd { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+.wv-col.web2 .wv-hd { color: var(--muted); }
+.wv-col.web3 .wv-hd { color: #8b9cff; }
+.wv-col ul { margin: 0; padding-left: 18px; }
+.wv-col li { font-size: 12.5px; line-height: 1.65; color: var(--text); }
+.wv-col.web2 li { color: var(--muted); }
+
+.wrap-flow .node .n { color: #8b9cff; }
+
+/* 노드 종류 표 */
+.wrap-nodes td.k { font-weight: 700; }
+.wrap-nodes td.k small { font-weight: 600; color: var(--muted); }
+.wrap-nodes td.yes { color: var(--green); font-weight: 700; white-space: nowrap; }
+.wrap-nodes td.no { color: var(--red); font-weight: 700; white-space: nowrap; }
+
+
+/* ============ 탭 9: 머클 증명 시뮬레이터 ============ */
+.mk-setup {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; margin-bottom: 6px;
+}
+.mk-accts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.mk-chip {
+  font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.mk-chip:hover { border-color: rgba(98,126,234,.5); color: var(--text); }
+.mk-chip.on { background: rgba(98,126,234,.14); border-color: #627eea; color: #8b9cff; }
+.mk-lie-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.mk-lie-toggle input { accent-color: var(--red); }
+.mk-controls { display: flex; justify-content: center; gap: 8px; }
+
+.mk-tree {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 18px 12px; margin: 8px 0 14px;
+  background: #0b1020; border: 1px solid var(--border); border-radius: 12px;
+  overflow-x: auto;
+}
+.mk-legend { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.55; max-width: 620px; }
+.mk-row { display: flex; justify-content: center; gap: 28px; }
+.mk-up {
+  text-align: center; font-size: 11.5px; color: #8b9cff; font-weight: 700;
+  margin: 8px 0; letter-spacing: .02em;
+}
+
+/* 부모로 묶이는 두 자식을 하나의 그룹 박스로 */
+.mk-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mk-group-hd {
+  font-size: 11px; font-weight: 800; color: #8b9cff;
+  background: rgba(98,126,234,.1); border: 1px solid rgba(98,126,234,.3);
+  border-radius: 999px; padding: 2px 10px;
+}
+.mk-group-nodes {
+  display: flex; gap: 10px; padding: 8px;
+  border: 1px dashed var(--border); border-radius: 12px;
+}
+
+.mk-node {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  min-width: 116px; padding: 8px 10px; border-radius: 9px;
+  background: var(--panel); border: 1px solid var(--border);
+  transition: border-color .2s, background .2s, box-shadow .2s, transform .2s;
+}
+.mk-node.root { min-width: 200px; border-color: rgba(98,126,234,.45); }
+.mk-node.leaf { min-width: 112px; }
+.mkn-lbl { font-size: 14px; color: var(--text); font-weight: 800; letter-spacing: .02em; }
+.mkn-sub { font-size: 11px; color: var(--muted); font-weight: 600; font-family: var(--mono); }
+.mkn-hash { font-size: 11.5px; color: #9aa7bd; font-weight: 700; }
+
+.mk-node.mk-path { border-color: #627eea; background: rgba(98,126,234,.1); }
+.mk-node.mk-path .mkn-hash { color: #8b9cff; }
+.mk-node.mk-sibling { border-color: rgba(227,179,65,.6); background: rgba(227,179,65,.1); }
+.mk-node.mk-sibling .mkn-hash { color: var(--yellow); }
+.mk-node.mk-done { border-color: var(--green); background: rgba(63,185,80,.1); box-shadow: 0 0 0 1px rgba(63,185,80,.35); }
+.mk-node.mk-done .mkn-hash { color: var(--green); }
+.mk-node.mk-bad { border-color: var(--red); background: rgba(248,81,73,.1); box-shadow: 0 0 0 1px rgba(248,81,73,.4); }
+.mk-node.mk-bad .mkn-hash { color: var(--red); }
+.mk-node.mk-active { animation: mkBlink .55s ease-in-out infinite; border-color: #8b9cff; transform: translateY(-2px); }
+@keyframes mkBlink {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(139,156,255,.35); background: rgba(98,126,234,.08); }
+  50% { box-shadow: 0 0 14px 2px rgba(139,156,255,.7); background: rgba(98,126,234,.22); }
+}
+
+.mk-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .mk-bottom { grid-template-columns: 1fr; } }
+.mk-proof-box, .mk-verify-box {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+}
+.mk-proof-box h3, .mk-verify-box h3 { margin: 0 0 8px; font-size: 13.5px; }
+.mk-proof-box h3 small, .mk-verify-box h3 small { font-weight: 600; color: var(--muted); }
+.mk-pf-item { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+.mk-pf-item:last-child { border-bottom: none; }
+.mk-pf-k { color: var(--muted); }
+.mk-pf-v { font-weight: 700; color: var(--text); }
+.mk-pf-v.bad { color: var(--red); }
+.mk-pf-v em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 600; }
+.mk-explain { font-size: 13px; line-height: 1.6; color: var(--text); min-height: 60px; }
+.mk-explain .mono { font-size: 12px; }
+.mk-verdict { margin-top: 10px; font-size: 12.5px; line-height: 1.55; padding: 10px 12px; border-radius: 9px; }
+.mk-verdict:empty { display: none; }
+.mk-verdict.ok { color: var(--green); background: rgba(63,185,80,.08); border: 1px solid rgba(63,185,80,.35); }
+.mk-verdict.bad { color: var(--red); background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.35); }
+
+@media (max-width: 560px) {
+  .mk-tree { padding: 14px 8px; }
+  .mk-row { gap: 10px; }
+  .mk-group-nodes { gap: 6px; padding: 6px; }
+  .mk-node { min-width: 78px; padding: 6px 5px; }
+  .mk-node.root { min-width: 150px; }
+  .mk-node.leaf { min-width: 76px; }
+  .mkn-lbl { font-size: 10px; }
+  .mkn-sub { font-size: 9px; }
+  .mkn-hash { font-size: 9.5px; }
+}

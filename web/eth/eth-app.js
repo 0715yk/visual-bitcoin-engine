@@ -4,6 +4,7 @@
 
 import { t, applyI18n } from "../i18n.js";
 import { renderSolidity } from "./eth-solidity.js";
+import { wireMerkleTab } from "./eth-merkle.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
@@ -1947,6 +1948,7 @@ export function setupEth(WasmEth, keccak256, addressFromLabel, evmRun) {
   wirePosTab();
   wireReTab();
   wireEvmTab();
+  wireMerkleTab(ethKeccakFn);
   renderAll();
   document.addEventListener("i18n:changed", () => {
     applyI18n();

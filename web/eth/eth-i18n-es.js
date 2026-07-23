@@ -14,6 +14,123 @@ export const ETH_I18N_ES = {
   "eth.tabs.pos": "6 · Consenso PoS",
   "eth.tabs.realestate": "7 · Inmobiliaria",
   "eth.tabs.evm": "8 · Ejecutor EVM",
+  "eth.tabs.merkle": "9 · Prueba de Merkle",
+  "eth.tabs.wrapup": "10 · Cierre",
+  "eth.ov.o9": "<b>9 · Prueba de Merkle</b> — cómo un cliente ligero verifica un solo valor sin tener todo el estado (animado)",
+  "eth.ov.o10": "<b>10 · Cierre</b> — todo Ethereum en una página: el relevo, la reejecución y la analogía con Web2",
+
+  // ---------- 9 · Prueba de Merkle ----------
+  "eth.mk.nodesH": "Primero — ¿cada nodo guarda todo el world state?",
+  "eth.mk.nodesLead":
+    "\"Todos reejecutan\" solo funciona si <b>guardas el estado</b>. Pero <b>cuánto</b> guarda un nodo depende de su tipo. En especial, un <b>cliente ligero no guarda estado</b>, así que comprueba los valores con la <b>prueba de Merkle</b> de abajo.",
+  "eth.mk.colNode": "Tipo de nodo",
+  "eth.mk.colHold": "¿Guarda world state?",
+  "eth.mk.colDesc": "Detalles",
+  "eth.mk.fullK": "Nodo completo <small>(el más común)</small>",
+  "eth.mk.fullHold": "✅ Estado actual (reciente)",
+  "eth.mk.fullDesc":
+    "Guarda el world state más reciente + todos los bloques. <b>Poda el estado intermedio muy antiguo (prune)</b>. Puede reconstruir desde génesis reejecutando si hace falta.",
+  "eth.mk.archK": "Nodo de archivo",
+  "eth.mk.archHold": "✅ Todo el estado histórico",
+  "eth.mk.archDesc":
+    "Guarda una <b>instantánea del estado en cada bloque</b> desde el bloque 1. Varios TB (para exploradores · infraestructura).",
+  "eth.mk.lightK": "Cliente ligero",
+  "eth.mk.lightHold": "❌ No guarda nada",
+  "eth.mk.lightDesc":
+    "Solo guarda <b>las cabeceras de bloque</b>. Para un saldo pregunta a un nodo completo y lo <b>verifica con una prueba de Merkle</b> contra el stateRoot de la cabecera.",
+  "eth.mk.mergeNote":
+    "<b>Desde The Merge (2022):</b> un nodo completo de Ethereum son en realidad <b>dos programas</b>. El <b>cliente de ejecución</b> (Geth · Nethermind, …) <b>guarda el world state y ejecuta la EVM</b>, mientras el <b>cliente de consenso</b> (Prysm · Lighthouse, …) se ocupa del PoS · atestaciones · slot/epoch. \"Guardar el world state\" es exactamente tarea del <b>cliente de ejecución</b>.",
+  "eth.mk.conceptH": "Prueba de Merkle — verificar un valor sin todo el estado",
+  "eth.mk.conceptLead":
+    "Un cliente ligero confía solo en el <b>único stateRoot de la cabecera del bloque</b>. Para comprobar \"¿este saldo es real?\", un nodo completo que tiene el estado envía solo <b>unos pocos hashes hermanos del camino</b>; el cliente <b>recalcula el hash desde la hoja hasta la cima</b> y lo compara con el stateRoot. Elige una cuenta abajo y <b>reproduce la prueba</b> — el camino parpadea mientras sube hasta el stateRoot.",
+  "eth.mk.conceptWho":
+    "<b>¿Quién lo hace?</b> <b>No el proponente.</b> Es un intercambio bajo demanda entre nodos: \"el que tiene el estado (nodo completo) genera la prueba / el que no lo tiene (cliente ligero) la verifica\".",
+  "eth.mk.simH": "Simulador del árbol de Merkle",
+  "eth.mk.lieTitle": "¿Y si el nodo completo informa un saldo falso?",
+  "eth.mk.lieLabel": "😈 El nodo completo miente (saldo falsificado)",
+  "eth.mk.run": "▶ Reproducir prueba",
+  "eth.mk.reset": "↺ Reiniciar",
+  "eth.mk.proofH": "Lo que envía el nodo completo <small>(hashes hermanos + valor)</small>",
+  "eth.mk.verifyH": "El recálculo del cliente ligero",
+  "eth.mk.whyH": "Por qué no se puede falsificar",
+  "eth.mk.why1":
+    "Un hash <b>cambia por completo si cambia un solo valor.</b> Así que si un nodo completo infla un saldo, el stateRoot que recalcula el cliente ligero <b>no coincidirá con el de la cabecera</b>. Activa el interruptor <b>😈 mentira</b> de arriba y reprodúcelo para verlo — la clave es verificar la autenticidad con unos pocos hashes <b>sin confiar en el nodo completo</b>.",
+  "eth.mk.why2":
+    "<b>Analogía con git:</b> archivos (cuentas) → hashes de directorio (nodos intermedios) → el hash final del árbol (stateRoot). Igual que confiar en un solo hash de commit te permite <b>verificar parcialmente</b> que cierto archivo está realmente en ese commit.",
+  "eth.mk.legend":
+    "Empieza en las <b>hojas (cuentas)</b> de abajo, <b>empareja cada una con su hermano y aplica keccak</b>, subiendo <b>hacia arriba (↑)</b> un nivel cada vez. La cima es el <b>stateRoot</b>.",
+  "eth.mk.up1": "↑ Concatena los dos nodos (N01, N23) y aplica keccak",
+  "eth.mk.up2": "↑ Concatena las dos hojas hermanas y aplica keccak",
+  "eth.mk.grpRoot": "combinar → stateRoot",
+  "eth.mk.grpN01": "combinar → N01",
+  "eth.mk.grpN23": "combinar → N23",
+  "eth.mk.prove": "Probar {name}",
+  "eth.mk.claim": "Valor declarado",
+  "eth.mk.forged": "⚠ falsificado",
+  "eth.mk.sib1": "Hash hermano ①",
+  "eth.mk.sib2": "Hash hermano ②",
+  "eth.mk.posR": "derecha",
+  "eth.mk.posL": "izquierda",
+  "eth.mk.step1":
+    "① Empieza por el hash de la hoja de <b>{name}</b>. <span class=\"mono\">keccak({name}:{bal}) = {hash}</span>",
+  "eth.mk.step2":
+    "② Añade la hoja hermana <span class=\"mono\">{sib}</span> a la {pos} y aplica keccak otra vez → sube al padre <b>{parent}</b>.",
+  "eth.mk.step3":
+    "③ Añade el nodo hermano <span class=\"mono\">{sib}</span> a la {pos} y aplica keccak → ¡recalcula el <b>stateRoot</b>!",
+  "eth.mk.step4ok":
+    "④ El resultado recalculado <b>coincide con el stateRoot de la cabecera</b>. Verificado con solo 2 hashes hermanos, ¡sin necesitar todo el estado!",
+  "eth.mk.step4bad":
+    "④ Falsificar un valor hizo que el <b>hash de la cima fuera completamente distinto.</b> No coincide con el stateRoot de la cabecera, así que el cliente ligero lo rechaza al instante.",
+  "eth.mk.vOk":
+    "✔ stateRoot recalculado = stateRoot de la cabecera<br/><span class=\"mono\">{root}</span> — <b>este saldo es real.</b> Verificado sin confiar en el nodo completo.",
+  "eth.mk.vBad":
+    "✘ Recalculado <span class=\"mono\">{comp}</span> ≠ cabecera <span class=\"mono\">{header}</span><br/><b>No coincide → mentira detectada.</b> Un saldo falsificado nunca puede producir el mismo stateRoot.",
+
+  // ---------- 10 · Cierre ----------
+  "eth.wrap.heroH": "Cierre — Ethereum sintetiza un \"servidor que nunca para\" a partir de un <em>relevo</em>",
+  "eth.wrap.heroLead":
+    "Web2.0 tiene <b>un servidor central</b> funcionando 24/7. Ethereum <b>no tiene</b> tal servidor. En su lugar, <b>un nodo distinto toma el testigo (bloque) en cada slot</b>, avanzando el estado un paso, mientras los demás nodos <b>lo reverifican por su cuenta</b>. El \"servidor que nunca descansa\" es una <b>ilusión sintetizada por miles de nodos que corren el relevo por turnos</b>.",
+  "eth.wrap.woA": "1 servidor central (24/7)",
+  "eth.wrap.woArrow": "→ reemplazado por →",
+  "eth.wrap.woB": "miles de nodos incentivados · relevo del testigo cada slot + reverificación mutua",
+  "eth.wrap.relayH": "El relevo — el testigo es el <span class=\"wr-hl-block\">bloque + stateRoot</span>",
+  "eth.wrap.relayLead":
+    "En cada slot (12s), <b>un nodo proponente elegido al azar</b> ejecuta las tx para construir el nuevo world state y stateRoot (crea el testigo) y lo pasa al siguiente slot. <b>Los demás validadores toman el testigo y lo reejecutan</b>, calificando si el stateRoot coincide y votando. Cada 32 slots (= 1 epoch), cuando se acumulan suficientes votos pasa a <b>finalized</b> — bloqueado, irreversible.",
+  "eth.wrap.sec": "12s",
+  "eth.wrap.p1": "🏃 Proponente <b>#7</b><small>sorteo RANDAO</small>",
+  "eth.wrap.p2": "🏃 Proponente <b>#42</b><small>rota a otro nodo</small>",
+  "eth.wrap.p3": "🏃 Proponente <b>#13</b><small>intenta falsificar el stateRoot</small>",
+  "eth.wrap.baton1": "📦 Bloque<br/><span class=\"mono\">stateRoot: a1c3…</span>",
+  "eth.wrap.baton2": "📦 Bloque<br/><span class=\"mono\">stateRoot: 9f0b…</span>",
+  "eth.wrap.baton3": "📦 Bloque<br/><span class=\"mono\">stateRoot: ☠ falso</span>",
+  "eth.wrap.reexec": "✔ Los validadores reejecutan",
+  "eth.wrap.agree": "≥ 2/3 de acuerdo",
+  "eth.wrap.handoff": "pasar el<br/>estado",
+  "eth.wrap.mismatch": "✘ reejecución → no coincide",
+  "eth.wrap.rejected": "rechazado · testigo caído",
+  "eth.wrap.justified": "justified ✔",
+  "eth.wrap.finalized": "finalized 🔒 (irreversible)",
+  "eth.wrap.epochLen": "1 epoch = 32 slots",
+  "eth.wrap.pt1":
+    "<b>Punto 1 · No corre siempre:</b> ningún nodo \"funciona 24/7 como un servidor\". Se despierta a reverificar <b>solo cuando llega un testigo (= llega un bloque)</b> y luego vuelve a descansar. La misma idea que el código de un contrato <b>durmiendo cuando no hay tx</b> (ejecución pasiva).",
+  "eth.wrap.pt2":
+    "<b>Punto 2 · La manipulación se descarta, no se castiga:</b> un bloque con stateRoot falsificado (slot 102) se detecta en la reverificación y <b>simplemente se rechaza/ignora</b>. El slashing solo ocurre en ataques al consenso mismo, como <b>doble firma o votos contradictorios</b>.",
+  "eth.wrap.pt3":
+    "<b>Punto 3 · La continuidad es sintética:</b> slot · epoch · votos · penalizaciones encajan como engranajes para producir <b>la apariencia de \"un servidor que nunca para\".</b> La realidad es <b>un relevo que corre por turnos mientras todos se reverifican</b>.",
+  "eth.wrap.vsH": "Servidor Web2.0 vs el relevo de Ethereum",
+  "eth.wrap.web2H": "Web2.0 — servidor central",
+  "eth.wrap.web2List":
+    "<li><b>Una máquina</b> corre 24/7 (un proceso residente)</li><li>Lo que calcula se <b>confía</b></li><li>Base de la confianza = <b>la empresa operadora</b></li><li>La empresa puede <b>cambiar valores/lógica</b> a voluntad</li><li>Si se detiene, el servicio se detiene (punto único de fallo)</li>",
+  "eth.wrap.web3H": "Web3.0 — Ethereum",
+  "eth.wrap.web3List":
+    "<li><b>Sin servidor permanente.</b> Cada slot <b>un nodo distinto toma el testigo</b></li><li>Miles de nodos <b>reejecutan y comparan todos</b> (verificar, no confiar)</li><li>Base de la confianza = <b>incentivos económicos + teoría de juegos</b> (stake · recompensas · slashing)</li><li>El código es <b>inmutable</b>. Nadie puede cambiar el resultado</li><li>Si algunos nodos mueren, el resto mantiene el relevo</li>",
+  "eth.wrap.vsConcl":
+    "<b>En una línea:</b> donde Web2 justificaba la centralización con <b>\"una empresa en la que confiar\",</b> Ethereum la reemplazó por <b>\"un diseño de incentivos en el que no hace falta confiar (psicología humana)\".</b> La clave es resolver la centralización no con tecnología sino con <b>economía y teoría de juegos</b>.",
+  "eth.wrap.sumH": "Todo lo que dejamos claro",
+  "eth.wrap.sumFlow":
+    "<div class=\"node\"><div class=\"n\">1</div><div class=\"t\">El código duerme</div><div class=\"d\">Un contrato es solo datos guardados en el estado. Se ejecuta solo cuando una tx lo llama (pasivo).</div></div><div class=\"node\"><div class=\"n\">2</div><div class=\"t\">No hay ejecución automática</div><div class=\"d\">\"Ejecutar al pasar 3000\" necesita un <b>keeper/bot</b> fuera de la cadena que vigile y llame vía tx. El precio lo introduce un <b>oráculo</b>.</div></div><div class=\"node\"><div class=\"n\">3</div><div class=\"t\">Todos reejecutan</div><div class=\"d\">Cada nodo calcula sobre <b>su propia copia</b>. Por eso v+1 hecho N veces no es v+N sino v+1 en todas partes (N personas resolviendo el mismo problema).</div></div><div class=\"node\"><div class=\"n\">4</div><div class=\"t\">El determinismo es condición</div><div class=\"d\">Nada de azar, APIs externas ni hora actual. Si no, cada nodo obtiene otra respuesta y la reverificación se rompe.</div></div><div class=\"node\"><div class=\"n\">5</div><div class=\"t\">Error = descartado / ataque = slashing</div><div class=\"d\">stateRoot erróneo → rechazado. Doble firma / votos contradictorios → slashing. Offline → penalización pequeña.</div></div><div class=\"node\"><div class=\"n\">6</div><div class=\"t\">justified → finalized</div><div class=\"d\">Una vez bloqueado por un voto de 2/3 es irreversible. Ahí el bloque se confirma en el world state.</div></div>",
+  "eth.wrap.sumConcl":
+    "<b>Conclusión:</b> un contrato inteligente no es un \"programa que vive por sí mismo\" sino un <b>motor de reglas inmutable que solo se mueve como se prometió cuando se le llama</b>, y <b>quién lo llama, y cuándo</b>, sigue viviendo en el mundo humano (Web2). Ethereum parece depender de Web2 <b>no porque sea impuro, sino porque intenta hacer más</b>.",
 
   // ---------- 7 · Escrow inmobiliario ----------
   "eth.re.h1": "Una compraventa inmobiliaria en Ethereum — el contrato de escrow",

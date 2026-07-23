@@ -21,6 +21,123 @@ export const ETH_I18N = {
     "eth.tabs.pos": "6 · PoS 합의",
     "eth.tabs.realestate": "7 · 부동산 거래",
     "eth.tabs.evm": "8 · EVM 실행기",
+    "eth.tabs.merkle": "9 · 머클 증명",
+    "eth.tabs.wrapup": "10 · 마무리",
+    "eth.ov.o9": "<b>9 · 머클 증명</b> — 라이트 클라이언트가 state 전체 없이 값 하나만 검증하는 원리 (애니메이션)",
+    "eth.ov.o10": "<b>10 · 마무리</b> — 릴레이·검산·Web2 비유로 이더리움 전체를 한 장에 총정리",
+
+    // ---------- 9 · 머클 증명 ----------
+    "eth.mk.nodesH": "먼저 — 노드는 world state를 다 들고 있나?",
+    "eth.mk.nodesLead":
+      "\"모두가 재실행한다\"는 건 <b>state를 들고 있어야</b> 가능해요. 근데 노드 종류마다 <b>얼마나 들고 있느냐</b>가 달라요. 특히 <b>라이트 클라이언트는 state를 안 들고</b> 있어서, 아래에서 볼 <b>머클 증명</b>으로 값을 확인해요.",
+    "eth.mk.colNode": "노드 종류",
+    "eth.mk.colHold": "world state 보유",
+    "eth.mk.colDesc": "설명",
+    "eth.mk.fullK": "풀 노드 <small>(가장 흔함)</small>",
+    "eth.mk.fullHold": "✅ 현재(최근) state",
+    "eth.mk.fullDesc":
+      "최신 world state + 모든 블록 보관. 아주 오래된 <b>중간 state는 잘라냄(prune)</b>. 필요하면 제네시스부터 재실행해 복원.",
+    "eth.mk.archK": "아카이브 노드",
+    "eth.mk.archHold": "✅ 모든 과거 state 전부",
+    "eth.mk.archDesc":
+      "블록 1번부터 지금까지 <b>모든 시점의 state 스냅샷</b>을 다 보관. 용량 수 TB(탐색기·인프라용).",
+    "eth.mk.lightK": "라이트 클라이언트",
+    "eth.mk.lightHold": "❌ 안 들고 있음",
+    "eth.mk.lightDesc":
+      "<b>블록 헤더만</b> 보관. 잔액 등이 필요하면 풀 노드에 요청하고, 헤더의 stateRoot로 <b>머클 증명만 검증</b>.",
+    "eth.mk.mergeNote":
+      "<b>머지(2022) 이후:</b> 이더리움 풀 노드는 프로그램이 <b>둘이 한 세트</b>예요. <b>실행 클라이언트</b>(Geth·Nethermind 등)가 <b>world state를 들고 EVM을 실행</b>하고, <b>합의 클라이언트</b>(Prysm·Lighthouse 등)가 PoS·투표·slot/epoch를 담당해요. \"world state를 들고 있다\"는 건 정확히는 <b>실행 클라이언트</b> 쪽이에요.",
+    "eth.mk.conceptH": "머클 증명 — state 전체 없이 값 하나만 검증하기",
+    "eth.mk.conceptLead":
+      "라이트 클라이언트는 <b>블록 헤더의 stateRoot 하나만</b> 신뢰해요. \"이 계정 잔액이 진짜야?\"를 확인하려고, state를 가진 풀 노드가 <b>경로의 형제 해시 몇 개</b>만 보내주면, 그걸로 <b>잎에서 꼭대기까지 해시를 직접 재계산</b>해 stateRoot와 대조해요. 아래에서 계정을 고르고 <b>증명을 재생</b>해 보세요 — 경로가 깜빡이며 stateRoot까지 타고 올라가요.",
+    "eth.mk.conceptWho":
+      "<b>누가 하나?</b> <b>제안자와 무관</b>해요. \"state를 가진 쪽(풀 노드)이 증명 생성 / 안 가진 쪽(라이트)이 검증\"하는 노드 간 on-demand 상호작용이에요.",
+    "eth.mk.simH": "머클 트리 시뮬레이터",
+    "eth.mk.lieTitle": "풀 노드가 잔액을 거짓으로 보고하면?",
+    "eth.mk.lieLabel": "😈 풀 노드가 거짓말 (잔액 위조)",
+    "eth.mk.run": "▶ 증명 재생",
+    "eth.mk.reset": "↺ 리셋",
+    "eth.mk.proofH": "풀 노드가 보내는 증명 <small>(형제 해시들 + 값)</small>",
+    "eth.mk.verifyH": "라이트 클라이언트의 재계산",
+    "eth.mk.whyH": "왜 못 속이나",
+    "eth.mk.why1":
+      "해시는 <b>값 하나만 바뀌어도 꼭대기 해시가 완전히 달라져요.</b> 그래서 풀 노드가 잔액을 부풀려 보내면, 라이트가 재계산한 stateRoot가 <b>헤더의 stateRoot와 안 맞아요</b>. 위 <b>😈 거짓말</b> 토글을 켜고 재생하면 직접 확인할 수 있어요 — <b>풀 노드를 믿지 않고도</b> 몇 개 해시만으로 진위를 가려내는 게 핵심이에요.",
+    "eth.mk.why2":
+      "<b>git 비유:</b> 파일(계정) → 디렉토리 해시(중간 노드) → 최종 트리 해시(stateRoot)로 올라가는 구조와 똑같아요. 커밋 해시 하나만 믿으면, 특정 파일이 그 커밋에 진짜 들어있는지 <b>부분 검증</b>할 수 있는 것과 같은 원리예요.",
+    "eth.mk.legend":
+      "아래 <b>잎(계정)</b> 에서 시작해서, <b>형제와 둘씩 이어붙여 keccak</b> 하며 <b>위로(↑)</b> 한 칸씩 올라가요. 꼭대기가 바로 <b>stateRoot</b> 예요.",
+    "eth.mk.up1": "↑ 두 노드(N01, N23)를 이어붙여 keccak",
+    "eth.mk.up2": "↑ 형제 잎 둘을 이어붙여 keccak",
+    "eth.mk.grpRoot": "묶으면 → stateRoot",
+    "eth.mk.grpN01": "묶으면 → N01",
+    "eth.mk.grpN23": "묶으면 → N23",
+    "eth.mk.prove": "{name} 증명",
+    "eth.mk.claim": "주장하는 값",
+    "eth.mk.forged": "⚠ 위조",
+    "eth.mk.sib1": "형제 해시 ①",
+    "eth.mk.sib2": "형제 해시 ②",
+    "eth.mk.posR": "오른쪽",
+    "eth.mk.posL": "왼쪽",
+    "eth.mk.step1":
+      "① <b>{name}</b>의 잎 해시부터 시작해요. <span class=\"mono\">keccak({name}:{bal}) = {hash}</span>",
+    "eth.mk.step2":
+      "② 형제 잎 <span class=\"mono\">{sib}</span> 를 {pos}에 붙여 다시 keccak → 부모 <b>{parent}</b> 로 올라가요.",
+    "eth.mk.step3":
+      "③ 형제 노드 <span class=\"mono\">{sib}</span> 를 {pos}에 붙여 keccak → <b>stateRoot</b> 재계산!",
+    "eth.mk.step4ok":
+      "④ 재계산 결과가 <b>헤더에 있던 stateRoot와 일치</b>해요. 전체 state 없이 형제 해시 2개만으로 검증 끝!",
+    "eth.mk.step4bad":
+      "④ 값 하나를 위조하니 <b>꼭대기 해시가 완전히 달라졌어요.</b> 헤더의 stateRoot와 안 맞으니 라이트 클라이언트가 즉시 거부해요.",
+    "eth.mk.vOk":
+      "✔ 재계산한 stateRoot = 헤더의 stateRoot<br/><span class=\"mono\">{root}</span> — <b>이 잔액은 진짜예요.</b> 풀 노드를 믿지 않고도 확인 완료.",
+    "eth.mk.vBad":
+      "✘ 재계산 <span class=\"mono\">{comp}</span> ≠ 헤더 <span class=\"mono\">{header}</span><br/><b>불일치 → 거짓말 발각.</b> 위조된 잔액은 절대 같은 stateRoot를 만들 수 없어요.",
+
+    // ---------- 10 · 마무리 ----------
+    "eth.wrap.heroH": "마무리 — 이더리움은 \"멈추지 않는 서버\"를 <em>릴레이</em>로 합성한다",
+    "eth.wrap.heroLead":
+      "Web2.0에는 24시간 혼자 도는 <b>중앙 서버 한 대</b>가 있어요. 이더리움엔 그런 서버가 <b>없어요</b>. 대신 <b>slot마다 다른 노드가 바통(블록)을 이어받아</b> 상태를 한 칸 전진시키고, 나머지 노드들이 <b>각자 재검산</b>해서 맞는지 확인해요. \"쉬지 않는 서버\"라는 <b>겉모습은, 번갈아 이어달리는 수천 개의 노드가 합성해내는 착시</b>예요.",
+    "eth.wrap.woA": "중앙 서버 1대 (24h 상시)",
+    "eth.wrap.woArrow": "→ 대체 →",
+    "eth.wrap.woB": "유인을 가진 수천 노드 · slot마다 바통 릴레이 + 상호 검산",
+    "eth.wrap.relayH": "릴레이 도식 — 바통은 <span class=\"wr-hl-block\">블록 + stateRoot</span>",
+    "eth.wrap.relayLead":
+      "각 slot(12초)마다 <b>랜덤 추첨된 제안자 노드 한 명</b>이 tx를 실행해 새 world state와 stateRoot를 만들고(바통 생성), 그걸 다음 slot으로 넘겨요. <b>나머지 검증자들은 그 바통을 받아 각자 재실행</b>해서 stateRoot가 같은지 채점하고 투표해요. 32 slot(=1 epoch)마다 충분히 표가 쌓이면 <b>finalized</b> — 되돌릴 수 없게 굳어요.",
+    "eth.wrap.sec": "12초",
+    "eth.wrap.p1": "🏃 제안자 <b>#7</b><small>RANDAO 추첨</small>",
+    "eth.wrap.p2": "🏃 제안자 <b>#42</b><small>다른 노드로 교대</small>",
+    "eth.wrap.p3": "🏃 제안자 <b>#13</b><small>stateRoot 조작 시도</small>",
+    "eth.wrap.baton1": "📦 블록<br/><span class=\"mono\">stateRoot: a1c3…</span>",
+    "eth.wrap.baton2": "📦 블록<br/><span class=\"mono\">stateRoot: 9f0b…</span>",
+    "eth.wrap.baton3": "📦 블록<br/><span class=\"mono\">stateRoot: ☠ 위조</span>",
+    "eth.wrap.reexec": "✔ 검증자 재실행",
+    "eth.wrap.agree": "2/3 이상 동의",
+    "eth.wrap.handoff": "state<br/>이어받기",
+    "eth.wrap.mismatch": "✘ 재실행 → 불일치",
+    "eth.wrap.rejected": "거부 · 바통 탈락",
+    "eth.wrap.justified": "justified ✔",
+    "eth.wrap.finalized": "finalized 🔒 (되돌릴 수 없음)",
+    "eth.wrap.epochLen": "1 epoch = 32 slot",
+    "eth.wrap.pt1":
+      "<b>포인트 1 · 상시 실행이 아님:</b> 어느 노드도 \"서버처럼 24시간 돌지\" 않아요. <b>바통이 올 때(=블록이 올 때)만</b> 깨어나 검산하고 다시 쉬어요. 컨트랙트 코드가 <b>tx가 없으면 자는 것</b>과 똑같은 이치예요(수동적 실행).",
+    "eth.wrap.pt2":
+      "<b>포인트 2 · 조작은 처벌이 아니라 탈락:</b> stateRoot를 위조한 블록(slot 102)은 재검산에서 걸려 <b>그냥 거부·무시</b>돼요. 몰수(slashing)는 <b>이중 서명·모순 투표</b>처럼 합의 자체를 공격할 때만 일어나요.",
+    "eth.wrap.pt3":
+      "<b>포인트 3 · 연속성은 합성물:</b> slot·epoch·투표·페널티라는 톱니가 맞물려 <b>\"끊기지 않는 한 대의 서버\" 같은 겉모습</b>을 만들어내요. 실체는 <b>번갈아 이어달리며 서로 검산하는 릴레이</b>예요.",
+    "eth.wrap.vsH": "Web2.0 서버 vs 이더리움 릴레이",
+    "eth.wrap.web2H": "Web2.0 — 중앙 서버",
+    "eth.wrap.web2List":
+      "<li><b>한 대</b>가 24시간 상시 실행(프로세스 상주)</li><li>그 서버가 계산하면 <b>믿어줌</b></li><li>신뢰의 근거 = <b>운영 회사</b></li><li>회사가 마음먹으면 <b>값·로직을 바꿀 수 있음</b></li><li>멈추면 서비스도 멈춤 (단일 실패점)</li>",
+    "eth.wrap.web3H": "Web3.0 — 이더리움",
+    "eth.wrap.web3List":
+      "<li>상시 서버 <b>없음</b>. slot마다 <b>다른 노드가 바통 이어받음</b></li><li>수천 노드가 <b>전부 재실행해 대조</b>(믿지 않고 검산)</li><li>신뢰의 근거 = <b>경제적 유인 + 게임이론</b>(stake·보상·slashing)</li><li>코드는 <b>불변</b>. 아무도 결과를 못 바꿈</li><li>노드 일부가 죽어도 나머지가 릴레이 계속</li>",
+    "eth.wrap.vsConcl":
+      "<b>한 줄로:</b> Web2가 <b>\"신뢰할 수 있는 회사\"</b>로 중앙화를 정당화했다면, 이더리움은 그걸 <b>\"신뢰할 필요 없는 인센티브 설계(인간 심리)\"</b>로 대체했어요. 중앙화 문제를 기술이 아니라 <b>경제·게임이론</b>으로 푼 게 핵심이에요.",
+    "eth.wrap.sumH": "우리가 짚은 것 총정리",
+    "eth.wrap.sumFlow":
+      "<div class=\"node\"><div class=\"n\">1</div><div class=\"t\">코드는 잔다</div><div class=\"d\">컨트랙트는 state에 저장된 데이터일 뿐. tx가 호출할 때만 실행(수동적).</div></div><div class=\"node\"><div class=\"n\">2</div><div class=\"t\">자동 실행은 없음</div><div class=\"d\">\"3000 넘으면 execute\"는 체인 밖 <b>keeper·봇</b>이 감시하다 tx로 호출. 가격은 <b>오라클</b>이 넣어줌.</div></div><div class=\"node\"><div class=\"n\">3</div><div class=\"t\">모두가 재실행</div><div class=\"d\">각 노드가 <b>자기 복사본</b>에서 계산. 그래서 v+1을 N번 해도 v+N이 아니라 전부 v+1(같은 문제 N명이 풀기).</div></div><div class=\"node\"><div class=\"n\">4</div><div class=\"t\">결정론이 조건</div><div class=\"d\">난수·외부 API·현재시각 금지. 안 그러면 노드마다 답이 달라져 검산 불가.</div></div><div class=\"node\"><div class=\"n\">5</div><div class=\"t\">틀리면 탈락 / 공격은 몰수</div><div class=\"d\">stateRoot 오류 → 거부. 이중 서명·모순 투표 → slashing. offline → 소액 감소.</div></div><div class=\"node\"><div class=\"n\">6</div><div class=\"t\">justified → finalized</div><div class=\"d\">2/3 투표로 굳어지면 되돌릴 수 없음. 그때 world state에 블록 확정.</div></div>",
+    "eth.wrap.sumConcl":
+      "<b>결론:</b> 스마트 컨트랙트는 \"스스로 사는 프로그램\"이 아니라 <b>호출되면 약속대로만 움직이는 불변 규칙 엔진</b>이고, 그 호출을 <b>누가·언제 할지</b>는 여전히 인간 세계(Web2)에 남아 있어요. 이더리움이 Web2에 기대 보이는 건 <b>순수하지 못해서가 아니라, 하려는 일이 더 많아서</b>예요.",
 
     // ---------- 7 · 부동산 에스크로 ----------
     "eth.re.h1": "부동산 거래를 이더리움으로 — 에스크로 컨트랙트",
@@ -499,6 +616,123 @@ export const ETH_I18N = {
     "eth.tabs.pos": "6 · PoS Consensus",
     "eth.tabs.realestate": "7 · Real Estate",
     "eth.tabs.evm": "8 · EVM Runner",
+    "eth.tabs.merkle": "9 · Merkle Proof",
+    "eth.tabs.wrapup": "10 · Wrap-up",
+    "eth.ov.o9": "<b>9 · Merkle Proof</b> — how a light client verifies a single value without the whole state (animated)",
+    "eth.ov.o10": "<b>10 · Wrap-up</b> — all of Ethereum on one page: the relay, re-execution, and the Web2 analogy",
+
+    // ---------- 9 · Merkle proof ----------
+    "eth.mk.nodesH": "First — does every node hold the whole world state?",
+    "eth.mk.nodesLead":
+      "\"Everyone re-executes\" only works if you <b>hold the state</b>. But <b>how much</b> a node holds depends on its type. In particular, a <b>light client holds no state</b>, so it checks values with the <b>Merkle proof</b> below.",
+    "eth.mk.colNode": "Node type",
+    "eth.mk.colHold": "Holds world state?",
+    "eth.mk.colDesc": "Details",
+    "eth.mk.fullK": "Full node <small>(most common)</small>",
+    "eth.mk.fullHold": "✅ Current (recent) state",
+    "eth.mk.fullDesc":
+      "Keeps the latest world state + all blocks. <b>Prunes very old intermediate state</b>. Can rebuild from genesis by re-executing if needed.",
+    "eth.mk.archK": "Archive node",
+    "eth.mk.archHold": "✅ All historical state",
+    "eth.mk.archDesc":
+      "Keeps a <b>state snapshot at every block</b> from block 1 onward. Several TB (for explorers · infra).",
+    "eth.mk.lightK": "Light client",
+    "eth.mk.lightHold": "❌ Holds none",
+    "eth.mk.lightDesc":
+      "Keeps <b>block headers only</b>. For a balance it asks a full node and <b>verifies via a Merkle proof</b> against the header's stateRoot.",
+    "eth.mk.mergeNote":
+      "<b>Since the Merge (2022):</b> an Ethereum full node is really <b>two programs</b>. The <b>execution client</b> (Geth · Nethermind, …) <b>holds the world state and runs the EVM</b>, while the <b>consensus client</b> (Prysm · Lighthouse, …) handles PoS · attestations · slot/epoch. \"Holding the world state\" is exactly the <b>execution client</b>'s job.",
+    "eth.mk.conceptH": "Merkle proof — verify one value without the whole state",
+    "eth.mk.conceptLead":
+      "A light client trusts only the <b>single stateRoot in the block header</b>. To check \"is this balance real?\", a full node that holds the state sends just <b>a few sibling hashes along the path</b>; the client <b>recomputes the hash from the leaf up to the top</b> and compares it to the stateRoot. Pick an account below and <b>play the proof</b> — the path blinks as it climbs to the stateRoot.",
+    "eth.mk.conceptWho":
+      "<b>Who does it?</b> <b>Not the proposer.</b> It's an on-demand exchange between nodes: \"the side that holds state (full node) generates the proof / the side that doesn't (light client) verifies it.\"",
+    "eth.mk.simH": "Merkle tree simulator",
+    "eth.mk.lieTitle": "What if the full node reports a false balance?",
+    "eth.mk.lieLabel": "😈 Full node lies (forged balance)",
+    "eth.mk.run": "▶ Play proof",
+    "eth.mk.reset": "↺ Reset",
+    "eth.mk.proofH": "What the full node sends <small>(sibling hashes + value)</small>",
+    "eth.mk.verifyH": "The light client's recomputation",
+    "eth.mk.whyH": "Why it can't be faked",
+    "eth.mk.why1":
+      "A hash <b>changes completely if even one value changes.</b> So if a full node inflates a balance, the stateRoot the light client recomputes <b>won't match the header's stateRoot</b>. Turn on the <b>😈 lie</b> toggle above and play to see it — the key is verifying authenticity from a few hashes <b>without trusting the full node</b>.",
+    "eth.mk.why2":
+      "<b>git analogy:</b> files (accounts) → directory hashes (intermediate nodes) → the final tree hash (stateRoot). Just like trusting one commit hash lets you <b>partially verify</b> that a specific file really is in that commit.",
+    "eth.mk.legend":
+      "Start at the <b>leaves (accounts)</b> below, <b>pair each with its sibling and keccak</b>, climbing <b>up (↑)</b> one level at a time. The very top is the <b>stateRoot</b>.",
+    "eth.mk.up1": "↑ Concatenate the two nodes (N01, N23) and keccak",
+    "eth.mk.up2": "↑ Concatenate the two sibling leaves and keccak",
+    "eth.mk.grpRoot": "combine → stateRoot",
+    "eth.mk.grpN01": "combine → N01",
+    "eth.mk.grpN23": "combine → N23",
+    "eth.mk.prove": "Prove {name}",
+    "eth.mk.claim": "Claimed value",
+    "eth.mk.forged": "⚠ forged",
+    "eth.mk.sib1": "Sibling hash ①",
+    "eth.mk.sib2": "Sibling hash ②",
+    "eth.mk.posR": "right",
+    "eth.mk.posL": "left",
+    "eth.mk.step1":
+      "① Start from <b>{name}</b>'s leaf hash. <span class=\"mono\">keccak({name}:{bal}) = {hash}</span>",
+    "eth.mk.step2":
+      "② Append sibling leaf <span class=\"mono\">{sib}</span> on the {pos} and keccak again → up to parent <b>{parent}</b>.",
+    "eth.mk.step3":
+      "③ Append sibling node <span class=\"mono\">{sib}</span> on the {pos} and keccak → recompute the <b>stateRoot</b>!",
+    "eth.mk.step4ok":
+      "④ The recomputed result <b>matches the stateRoot in the header</b>. Verified with just 2 sibling hashes — no full state needed!",
+    "eth.mk.step4bad":
+      "④ Forging one value made the <b>top hash completely different.</b> It doesn't match the header's stateRoot, so the light client rejects it instantly.",
+    "eth.mk.vOk":
+      "✔ Recomputed stateRoot = header's stateRoot<br/><span class=\"mono\">{root}</span> — <b>this balance is real.</b> Verified without trusting the full node.",
+    "eth.mk.vBad":
+      "✘ Recomputed <span class=\"mono\">{comp}</span> ≠ header <span class=\"mono\">{header}</span><br/><b>Mismatch → lie caught.</b> A forged balance can never produce the same stateRoot.",
+
+    // ---------- 10 · Wrap-up ----------
+    "eth.wrap.heroH": "Wrap-up — Ethereum synthesizes a \"server that never stops\" out of a <em>relay</em>",
+    "eth.wrap.heroLead":
+      "Web2.0 has <b>one central server</b> running 24/7. Ethereum has <b>no such server</b>. Instead <b>a different node picks up the baton (block) each slot</b>, advancing the state one step, while the other nodes <b>re-check it themselves</b>. The \"never-resting server\" is an <b>illusion synthesized by thousands of nodes running the relay in turns</b>.",
+    "eth.wrap.woA": "1 central server (24/7)",
+    "eth.wrap.woArrow": "→ replaced by →",
+    "eth.wrap.woB": "thousands of incentivized nodes · baton relay each slot + mutual re-checking",
+    "eth.wrap.relayH": "The relay — the baton is the <span class=\"wr-hl-block\">block + stateRoot</span>",
+    "eth.wrap.relayLead":
+      "Each slot (12s), <b>one randomly drawn proposer node</b> executes txs to build the new world state and stateRoot (creating the baton) and passes it to the next slot. <b>The other validators take the baton and re-execute it</b>, grading whether the stateRoot matches and voting. Every 32 slots (= 1 epoch), once enough votes pile up it becomes <b>finalized</b> — locked, irreversible.",
+    "eth.wrap.sec": "12s",
+    "eth.wrap.p1": "🏃 Proposer <b>#7</b><small>RANDAO draw</small>",
+    "eth.wrap.p2": "🏃 Proposer <b>#42</b><small>rotates to another node</small>",
+    "eth.wrap.p3": "🏃 Proposer <b>#13</b><small>tries to forge stateRoot</small>",
+    "eth.wrap.baton1": "📦 Block<br/><span class=\"mono\">stateRoot: a1c3…</span>",
+    "eth.wrap.baton2": "📦 Block<br/><span class=\"mono\">stateRoot: 9f0b…</span>",
+    "eth.wrap.baton3": "📦 Block<br/><span class=\"mono\">stateRoot: ☠ forged</span>",
+    "eth.wrap.reexec": "✔ Validators re-execute",
+    "eth.wrap.agree": "≥ 2/3 agree",
+    "eth.wrap.handoff": "hand off<br/>state",
+    "eth.wrap.mismatch": "✘ re-exec → mismatch",
+    "eth.wrap.rejected": "rejected · baton dropped",
+    "eth.wrap.justified": "justified ✔",
+    "eth.wrap.finalized": "finalized 🔒 (irreversible)",
+    "eth.wrap.epochLen": "1 epoch = 32 slots",
+    "eth.wrap.pt1":
+      "<b>Point 1 · Not always running:</b> no node \"runs 24/7 like a server.\" It wakes to re-check <b>only when a baton arrives (= a block arrives)</b>, then rests again. Same idea as contract code <b>sleeping when there's no tx</b> (passive execution).",
+    "eth.wrap.pt2":
+      "<b>Point 2 · Tampering is dropped, not punished:</b> a block with a forged stateRoot (slot 102) is caught during re-checking and <b>simply rejected/ignored</b>. Slashing only happens for attacks on consensus itself, like <b>double-signing or contradictory votes</b>.",
+    "eth.wrap.pt3":
+      "<b>Point 3 · Continuity is synthetic:</b> slot · epoch · votes · penalties mesh like gears to produce <b>the appearance of \"one server that never stops.\"</b> The reality is <b>a relay running in turns while everyone re-checks each other</b>.",
+    "eth.wrap.vsH": "Web2.0 server vs the Ethereum relay",
+    "eth.wrap.web2H": "Web2.0 — central server",
+    "eth.wrap.web2List":
+      "<li><b>One machine</b> runs 24/7 (a resident process)</li><li>Whatever it computes is <b>trusted</b></li><li>Basis of trust = <b>the operating company</b></li><li>The company can <b>change values/logic</b> at will</li><li>If it stops, the service stops (single point of failure)</li>",
+    "eth.wrap.web3H": "Web3.0 — Ethereum",
+    "eth.wrap.web3List":
+      "<li><b>No always-on server.</b> Each slot <b>a different node picks up the baton</b></li><li>Thousands of nodes <b>all re-execute and compare</b> (verify, don't trust)</li><li>Basis of trust = <b>economic incentives + game theory</b> (stake · rewards · slashing)</li><li>Code is <b>immutable</b>. No one can change the result</li><li>If some nodes die, the rest keep the relay going</li>",
+    "eth.wrap.vsConcl":
+      "<b>In one line:</b> where Web2 justified centralization with <b>\"a company you can trust,\"</b> Ethereum replaced it with <b>\"incentive design you don't need to trust (human psychology).\"</b> The key is solving centralization not with technology but with <b>economics and game theory</b>.",
+    "eth.wrap.sumH": "Everything we pinned down",
+    "eth.wrap.sumFlow":
+      "<div class=\"node\"><div class=\"n\">1</div><div class=\"t\">Code sleeps</div><div class=\"d\">A contract is just data stored in the state. It runs only when a tx calls it (passive).</div></div><div class=\"node\"><div class=\"n\">2</div><div class=\"t\">No auto-execution</div><div class=\"d\">\"Execute when it passes 3000\" needs an off-chain <b>keeper/bot</b> to watch and call it via tx. The price is pushed in by an <b>oracle</b>.</div></div><div class=\"node\"><div class=\"n\">3</div><div class=\"t\">Everyone re-executes</div><div class=\"d\">Each node computes on <b>its own copy</b>. So v+1 done N times isn't v+N but v+1 everywhere (N people solving the same problem).</div></div><div class=\"node\"><div class=\"n\">4</div><div class=\"t\">Determinism is required</div><div class=\"d\">No randomness, external APIs, or current time. Otherwise nodes get different answers and re-checking breaks.</div></div><div class=\"node\"><div class=\"n\">5</div><div class=\"t\">Wrong = dropped / attack = slashed</div><div class=\"d\">Bad stateRoot → rejected. Double-signing / contradictory votes → slashing. Offline → small penalty.</div></div><div class=\"node\"><div class=\"n\">6</div><div class=\"t\">justified → finalized</div><div class=\"d\">Once locked by a 2/3 vote it's irreversible. That's when the block is committed to the world state.</div></div>",
+    "eth.wrap.sumConcl":
+      "<b>Conclusion:</b> a smart contract isn't a \"program that lives on its own\" but an <b>immutable rule engine that moves only as promised when called</b>, and <b>who calls it, and when</b>, still lives in the human world (Web2). Ethereum looks dependent on Web2 <b>not because it's impure, but because it tries to do more</b>.",
 
     // ---------- 7 · Real estate escrow ----------
     "eth.re.h1": "A real-estate sale on Ethereum — the escrow contract",

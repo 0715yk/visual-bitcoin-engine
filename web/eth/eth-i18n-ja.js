@@ -14,6 +14,123 @@ export const ETH_I18N_JA = {
   "eth.tabs.pos": "6 · PoS 合意",
   "eth.tabs.realestate": "7 · 不動産取引",
   "eth.tabs.evm": "8 · EVM 実行機",
+  "eth.tabs.merkle": "9 · マークル証明",
+  "eth.tabs.wrapup": "10 · まとめ",
+  "eth.ov.o9": "<b>9 · マークル証明</b> — ライトクライアントがstate全体なしで値を1つだけ検証する仕組み（アニメーション）",
+  "eth.ov.o10": "<b>10 · まとめ</b> — リレー・再計算・Web2のたとえで、イーサリアム全体を1枚に総まとめ",
+
+  // ---------- 9 · マークル証明 ----------
+  "eth.mk.nodesH": "まず — ノードはworld stateを全部持っているの？",
+  "eth.mk.nodesLead":
+    "「全員が再実行する」には<b>stateを持っている必要</b>があります。でもノードの種類によって<b>どれだけ持つか</b>が違います。特に<b>ライトクライアントはstateを持たない</b>ので、下の<b>マークル証明</b>で値を確認します。",
+  "eth.mk.colNode": "ノードの種類",
+  "eth.mk.colHold": "world state 保有",
+  "eth.mk.colDesc": "説明",
+  "eth.mk.fullK": "フルノード <small>(最も一般的)</small>",
+  "eth.mk.fullHold": "✅ 現在(最近)のstate",
+  "eth.mk.fullDesc":
+    "最新のworld state + 全ブロックを保管。とても古い<b>中間stateは切り捨て(prune)</b>。必要ならgenesisから再実行して復元。",
+  "eth.mk.archK": "アーカイブノード",
+  "eth.mk.archHold": "✅ 過去すべてのstate",
+  "eth.mk.archDesc":
+    "ブロック1番から現在まで<b>あらゆる時点のstateスナップショット</b>を全部保管。容量は数TB(エクスプローラ・インフラ用)。",
+  "eth.mk.lightK": "ライトクライアント",
+  "eth.mk.lightHold": "❌ 持たない",
+  "eth.mk.lightDesc":
+    "<b>ブロックヘッダのみ</b>を保管。残高などが必要ならフルノードに要求し、ヘッダのstateRootで<b>マークル証明を検証</b>するだけ。",
+  "eth.mk.mergeNote":
+    "<b>マージ(2022)以降:</b> イーサリアムのフルノードは<b>2つで1セット</b>のプログラムです。<b>実行クライアント</b>(Geth・Nethermindなど)が<b>world stateを持ちEVMを実行</b>し、<b>合意クライアント</b>(Prysm・Lighthouseなど)がPoS・投票・slot/epochを担当します。「world stateを持つ」のは正確には<b>実行クライアント</b>側です。",
+  "eth.mk.conceptH": "マークル証明 — state全体なしで値を1つだけ検証する",
+  "eth.mk.conceptLead":
+    "ライトクライアントは<b>ブロックヘッダのstateRoot 1つだけ</b>を信頼します。「このアカウントの残高は本物？」を確認するため、stateを持つフルノードが<b>経路の兄弟ハッシュを数個</b>送ると、それで<b>葉から頂点までハッシュを自分で再計算</b>してstateRootと照合します。下でアカウントを選び<b>証明を再生</b>してみてください — 経路が点滅しながらstateRootまで登ります。",
+  "eth.mk.conceptWho":
+    "<b>誰がやる？</b> <b>提案者は無関係</b>です。「stateを持つ側(フルノード)が証明を生成 / 持たない側(ライト)が検証」する、ノード間のオンデマンドなやり取りです。",
+  "eth.mk.simH": "マークルツリー・シミュレーター",
+  "eth.mk.lieTitle": "フルノードが残高を偽って報告したら？",
+  "eth.mk.lieLabel": "😈 フルノードが嘘 (残高を偽造)",
+  "eth.mk.run": "▶ 証明を再生",
+  "eth.mk.reset": "↺ リセット",
+  "eth.mk.proofH": "フルノードが送る証明 <small>(兄弟ハッシュ + 値)</small>",
+  "eth.mk.verifyH": "ライトクライアントの再計算",
+  "eth.mk.whyH": "なぜ騙せないのか",
+  "eth.mk.why1":
+    "ハッシュは<b>値が1つ変わるだけで頂点のハッシュが全く別物</b>になります。だからフルノードが残高を水増しして送っても、ライトが再計算したstateRootは<b>ヘッダのstateRootと一致しません</b>。上の<b>😈 嘘</b>トグルをオンにして再生すれば自分で確認できます — <b>フルノードを信頼せずに</b>数個のハッシュだけで真偽を見分けるのが要点です。",
+  "eth.mk.why2":
+    "<b>gitのたとえ:</b> ファイル(アカウント) → ディレクトリのハッシュ(中間ノード) → 最終ツリーのハッシュ(stateRoot)へ登る構造と同じ。コミットハッシュ1つを信じれば、特定のファイルがそのコミットに本当に入っているか<b>部分検証</b>できるのと同じ原理です。",
+  "eth.mk.legend":
+    "下の<b>葉(アカウント)</b>から始めて、<b>兄弟と2つずつ連結してkeccak</b>しながら<b>上へ(↑)</b>1段ずつ登ります。頂点がまさに<b>stateRoot</b>です。",
+  "eth.mk.up1": "↑ 2つのノード(N01, N23)を連結してkeccak",
+  "eth.mk.up2": "↑ 兄弟の葉2つを連結してkeccak",
+  "eth.mk.grpRoot": "まとめる → stateRoot",
+  "eth.mk.grpN01": "まとめる → N01",
+  "eth.mk.grpN23": "まとめる → N23",
+  "eth.mk.prove": "{name} を証明",
+  "eth.mk.claim": "主張する値",
+  "eth.mk.forged": "⚠ 偽造",
+  "eth.mk.sib1": "兄弟ハッシュ ①",
+  "eth.mk.sib2": "兄弟ハッシュ ②",
+  "eth.mk.posR": "右",
+  "eth.mk.posL": "左",
+  "eth.mk.step1":
+    "① <b>{name}</b>の葉ハッシュから始めます。<span class=\"mono\">keccak({name}:{bal}) = {hash}</span>",
+  "eth.mk.step2":
+    "② 兄弟の葉 <span class=\"mono\">{sib}</span> を{pos}側に付けて再びkeccak → 親 <b>{parent}</b> へ登ります。",
+  "eth.mk.step3":
+    "③ 兄弟ノード <span class=\"mono\">{sib}</span> を{pos}側に付けてkeccak → <b>stateRoot</b> を再計算！",
+  "eth.mk.step4ok":
+    "④ 再計算の結果が<b>ヘッダにあったstateRootと一致</b>しました。state全体なしで兄弟ハッシュ2つだけで検証完了！",
+  "eth.mk.step4bad":
+    "④ 値を1つ偽造したら<b>頂点のハッシュが全く別物</b>になりました。ヘッダのstateRootと合わないので、ライトクライアントは即座に拒否します。",
+  "eth.mk.vOk":
+    "✔ 再計算したstateRoot = ヘッダのstateRoot<br/><span class=\"mono\">{root}</span> — <b>この残高は本物です。</b>フルノードを信頼せずに確認完了。",
+  "eth.mk.vBad":
+    "✘ 再計算 <span class=\"mono\">{comp}</span> ≠ ヘッダ <span class=\"mono\">{header}</span><br/><b>不一致 → 嘘が発覚。</b>偽造した残高は決して同じstateRootを作れません。",
+
+  // ---------- 10 · まとめ ----------
+  "eth.wrap.heroH": "まとめ — イーサリアムは「止まらないサーバー」を<em>リレー</em>で合成する",
+  "eth.wrap.heroLead":
+    "Web2.0には24時間ひとりで回る<b>中央サーバー1台</b>があります。イーサリアムにはそんなサーバーは<b>ありません</b>。代わりに<b>slotごとに別のノードがバトン(ブロック)を受け取り</b>状態を1つ前進させ、残りのノードが<b>各自で再計算</b>して正しいか確認します。「休まないサーバー」という<b>見た目は、交代でリレーする数千のノードが合成する錯覚</b>です。",
+  "eth.wrap.woA": "中央サーバー1台 (24h 常時)",
+  "eth.wrap.woArrow": "→ 置き換え →",
+  "eth.wrap.woB": "動機を持つ数千のノード · slotごとにバトンリレー + 相互チェック",
+  "eth.wrap.relayH": "リレー図 — バトンは<span class=\"wr-hl-block\">ブロック + stateRoot</span>",
+  "eth.wrap.relayLead":
+    "各slot(12秒)ごとに<b>ランダム抽選された提案者ノード1名</b>がtxを実行して新しいworld stateとstateRootを作り(バトン生成)、次のslotへ渡します。<b>残りの検証者はそのバトンを受け取り各自再実行</b>して、stateRootが同じか採点し投票します。32 slot(=1 epoch)ごとに十分な票が集まれば<b>finalized</b> — 戻せなく固まります。",
+  "eth.wrap.sec": "12秒",
+  "eth.wrap.p1": "🏃 提案者 <b>#7</b><small>RANDAO抽選</small>",
+  "eth.wrap.p2": "🏃 提案者 <b>#42</b><small>別のノードに交代</small>",
+  "eth.wrap.p3": "🏃 提案者 <b>#13</b><small>stateRoot改ざん試行</small>",
+  "eth.wrap.baton1": "📦 ブロック<br/><span class=\"mono\">stateRoot: a1c3…</span>",
+  "eth.wrap.baton2": "📦 ブロック<br/><span class=\"mono\">stateRoot: 9f0b…</span>",
+  "eth.wrap.baton3": "📦 ブロック<br/><span class=\"mono\">stateRoot: ☠ 偽造</span>",
+  "eth.wrap.reexec": "✔ 検証者が再実行",
+  "eth.wrap.agree": "2/3以上が同意",
+  "eth.wrap.handoff": "stateを<br/>引き継ぐ",
+  "eth.wrap.mismatch": "✘ 再実行 → 不一致",
+  "eth.wrap.rejected": "拒否 · バトン脱落",
+  "eth.wrap.justified": "justified ✔",
+  "eth.wrap.finalized": "finalized 🔒 (戻せない)",
+  "eth.wrap.epochLen": "1 epoch = 32 slot",
+  "eth.wrap.pt1":
+    "<b>ポイント1 · 常時実行ではない:</b> どのノードも「サーバーのように24時間回り続け」ません。<b>バトンが来たとき(=ブロックが来たとき)だけ</b>目覚めて再計算し、また休みます。コントラクトのコードが<b>txがなければ眠る</b>のと同じ理屈です(受動的な実行)。",
+  "eth.wrap.pt2":
+    "<b>ポイント2 · 改ざんは罰ではなく脱落:</b> stateRootを偽造したブロック(slot 102)は再計算で見つかり<b>ただ拒否・無視</b>されます。没収(slashing)は<b>二重署名・矛盾投票</b>のように合意そのものを攻撃したときだけ起きます。",
+  "eth.wrap.pt3":
+    "<b>ポイント3 · 連続性は合成物:</b> slot・epoch・投票・ペナルティという歯車がかみ合って<b>「途切れない1台のサーバー」のような見た目</b>を作り出します。実体は<b>交代でリレーし互いに再計算するリレー</b>です。",
+  "eth.wrap.vsH": "Web2.0サーバー vs イーサリアムのリレー",
+  "eth.wrap.web2H": "Web2.0 — 中央サーバー",
+  "eth.wrap.web2List":
+    "<li><b>1台</b>が24時間常時実行(プロセス常駐)</li><li>そのサーバーが計算すれば<b>信じる</b></li><li>信頼の根拠 = <b>運営会社</b></li><li>会社がその気になれば<b>値・ロジックを変えられる</b></li><li>止まればサービスも止まる(単一障害点)</li>",
+  "eth.wrap.web3H": "Web3.0 — イーサリアム",
+  "eth.wrap.web3List":
+    "<li>常時サーバーは<b>なし</b>。slotごとに<b>別のノードがバトンを受け取る</b></li><li>数千のノードが<b>全員再実行して照合</b>(信じずに検算)</li><li>信頼の根拠 = <b>経済的動機 + ゲーム理論</b>(stake・報酬・slashing)</li><li>コードは<b>不変</b>。誰も結果を変えられない</li><li>一部のノードが落ちても残りがリレーを続ける</li>",
+  "eth.wrap.vsConcl":
+    "<b>一言で:</b> Web2が<b>「信頼できる会社」</b>で中央集権を正当化したなら、イーサリアムはそれを<b>「信頼する必要のないインセンティブ設計(人間の心理)」</b>で置き換えました。中央集権の問題を技術ではなく<b>経済・ゲーム理論</b>で解いたのが核心です。",
+  "eth.wrap.sumH": "私たちが押さえたこと総まとめ",
+  "eth.wrap.sumFlow":
+    "<div class=\"node\"><div class=\"n\">1</div><div class=\"t\">コードは眠る</div><div class=\"d\">コントラクトはstateに保存されたデータにすぎない。txが呼んだときだけ実行(受動的)。</div></div><div class=\"node\"><div class=\"n\">2</div><div class=\"t\">自動実行はない</div><div class=\"d\">「3000を超えたらexecute」はチェーン外の<b>keeper・ボット</b>が監視してtxで呼ぶ。価格は<b>オラクル</b>が入れる。</div></div><div class=\"node\"><div class=\"n\">3</div><div class=\"t\">全員が再実行</div><div class=\"d\">各ノードが<b>自分のコピー</b>で計算。だからv+1をN回やってもv+Nではなく全部v+1(同じ問題をN人が解く)。</div></div><div class=\"node\"><div class=\"n\">4</div><div class=\"t\">決定論が条件</div><div class=\"d\">乱数・外部API・現在時刻は禁止。さもないとノードごとに答えが変わり検算不能。</div></div><div class=\"node\"><div class=\"n\">5</div><div class=\"t\">間違えば脱落 / 攻撃は没収</div><div class=\"d\">stateRootの誤り → 拒否。二重署名・矛盾投票 → slashing。offline → 少額減少。</div></div><div class=\"node\"><div class=\"n\">6</div><div class=\"t\">justified → finalized</div><div class=\"d\">2/3の投票で固まれば戻せない。そのときworld stateにブロック確定。</div></div>",
+  "eth.wrap.sumConcl":
+    "<b>結論:</b> スマートコントラクトは「自分で生きるプログラム」ではなく<b>呼ばれたら約束どおりにだけ動く不変のルールエンジン</b>であり、その呼び出しを<b>誰が・いつするか</b>は依然として人間の世界(Web2)に残っています。イーサリアムがWeb2に頼って見えるのは<b>純粋でないからではなく、やろうとすることが多いから</b>です。",
 
   // ---------- 7 · 不動産 escrow ----------
   "eth.re.h1": "不動産の売買をイーサリアムで — escrowコントラクト",

@@ -138,6 +138,8 @@
       <button class="tab-btn" data-tab="eth-pos" data-i18n="eth.tabs.pos">6 · PoS 합의</button>
       <button class="tab-btn" data-tab="eth-realestate" data-i18n="eth.tabs.realestate">7 · 부동산 거래</button>
       <button class="tab-btn" data-tab="eth-evm" data-i18n="eth.tabs.evm">8 · EVM 실행기</button>
+      <button class="tab-btn" data-tab="eth-merkle" data-i18n="eth.tabs.merkle">9 · 머클 증명</button>
+      <button class="tab-btn" data-tab="eth-wrapup" data-i18n="eth.tabs.wrapup">10 · 마무리</button>
     </nav>
 
     <!-- ============================================================
@@ -1196,6 +1198,8 @@ Coinbase -> Miner : 6.25</textarea>
           <li data-i18n="eth.ov.o6"><b>6 · PoS 합의</b> — slot → attest → justified/finalized · slashing</li>
           <li data-i18n="eth.ov.o7"><b>7 · 부동산 거래</b> — 배운 걸 전부 묶는 에스크로 실전 (총정리)</li>
           <li data-i18n="eth.ov.o8"><b>8 · EVM 실행기</b> — 바이트코드가 실제로 실행되는 과정을 한 스텝씩</li>
+          <li data-i18n="eth.ov.o9"><b>9 · 머클 증명</b> — 라이트 클라이언트가 state 전체 없이 값 하나만 검증하는 원리 (애니메이션)</li>
+          <li data-i18n="eth.ov.o10"><b>10 · 마무리</b> — 릴레이·검산·Web2 비유로 이더리움 전체를 한 장에 총정리</li>
         </ul>
       </div>
     </section>
@@ -2010,6 +2014,231 @@ tip  = 21,000 × T × 10⁻⁹ ETH → 제안자
         </div>
         <div class="callout key" data-i18n="eth.evm.why3">
           <b>핵심:</b> <code>new_state = EVM.execute(state, tx)</code> 하고 <code>stateRoot = hash(new_state)</code>. 이 상태 전이 기계를 이해하면, 나머지는 전부 "이 기계 위의 인스턴스들"로 보입니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 9: 머클 증명 시뮬레이터
+         ============================================================ -->
+    <section class="tab-panel chain-eth" id="tab-eth-merkle" data-chain="eth">
+      <!-- 카드 0: 노드는 world state를 얼마나 들고 있나 -->
+      <div class="card">
+        <h2 data-i18n="eth.mk.nodesH">먼저 — 노드는 world state를 다 들고 있나?</h2>
+        <p class="lead" data-i18n="eth.mk.nodesLead">"모두가 재실행한다"는 건 <b>state를 들고 있어야</b> 가능해요. 근데 노드 종류마다 <b>얼마나 들고 있느냐</b>가 달라요. 특히 <b>라이트 클라이언트는 state를 안 들고</b> 있어서, 아래에서 볼 <b>머클 증명</b>으로 값을 확인해요.</p>
+
+        <table class="cmp-table wrap-nodes">
+          <thead>
+            <tr>
+              <th data-i18n="eth.mk.colNode">노드 종류</th>
+              <th data-i18n="eth.mk.colHold">world state 보유</th>
+              <th data-i18n="eth.mk.colDesc">설명</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="k" data-i18n="eth.mk.fullK">풀 노드 <small>(가장 흔함)</small></td>
+              <td class="yes" data-i18n="eth.mk.fullHold">✅ 현재(최근) state</td>
+              <td data-i18n="eth.mk.fullDesc">최신 world state + 모든 블록 보관. 아주 오래된 <b>중간 state는 잘라냄(prune)</b>. 필요하면 제네시스부터 재실행해 복원.</td>
+            </tr>
+            <tr>
+              <td class="k" data-i18n="eth.mk.archK">아카이브 노드</td>
+              <td class="yes" data-i18n="eth.mk.archHold">✅ 모든 과거 state 전부</td>
+              <td data-i18n="eth.mk.archDesc">블록 1번부터 지금까지 <b>모든 시점의 state 스냅샷</b>을 다 보관. 용량 수 TB(탐색기·인프라용).</td>
+            </tr>
+            <tr>
+              <td class="k" data-i18n="eth.mk.lightK">라이트 클라이언트</td>
+              <td class="no" data-i18n="eth.mk.lightHold">❌ 안 들고 있음</td>
+              <td data-i18n="eth.mk.lightDesc"><b>블록 헤더만</b> 보관. 잔액 등이 필요하면 풀 노드에 요청하고, 헤더의 stateRoot로 <b>머클 증명만 검증</b>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout" data-i18n="eth.mk.mergeNote">
+          <b>머지(2022) 이후:</b> 이더리움 풀 노드는 프로그램이 <b>둘이 한 세트</b>예요. <b>실행 클라이언트</b>(Geth·Nethermind 등)가 <b>world state를 들고 EVM을 실행</b>하고, <b>합의 클라이언트</b>(Prysm·Lighthouse 등)가 PoS·투표·slot/epoch를 담당해요. "world state를 들고 있다"는 건 정확히는 <b>실행 클라이언트</b> 쪽이에요.
+        </div>
+      </div>
+
+      <!-- 카드 1: 개념 -->
+      <div class="card">
+        <h2 data-i18n="eth.mk.conceptH">머클 증명 — state 전체 없이 값 하나만 검증하기</h2>
+        <p class="lead" data-i18n="eth.mk.conceptLead">라이트 클라이언트는 <b>블록 헤더의 stateRoot 하나만</b> 신뢰해요. "이 계정 잔액이 진짜야?"를 확인하려고, state를 가진 풀 노드가 <b>경로의 형제 해시 몇 개</b>만 보내주면, 그걸로 <b>잎에서 꼭대기까지 해시를 직접 재계산</b>해 stateRoot와 대조해요. 아래에서 계정을 고르고 <b>증명을 재생</b>해 보세요 — 경로가 깜빡이며 stateRoot까지 타고 올라가요.</p>
+        <div class="callout" data-i18n="eth.mk.conceptWho">
+          <b>누가 하나?</b> <b>제안자와 무관</b>해요. "state를 가진 쪽(풀 노드)이 증명 생성 / 안 가진 쪽(라이트)이 검증"하는 노드 간 on-demand 상호작용이에요.
+        </div>
+      </div>
+
+      <!-- 카드 2: 시뮬레이터 -->
+      <div class="card">
+        <h2 data-i18n="eth.mk.simH">머클 트리 시뮬레이터</h2>
+
+        <div class="mk-setup">
+          <div class="mk-accts" id="mkAccts"></div>
+          <label class="mk-lie-toggle" data-i18n-attr="title:eth.mk.lieTitle" title="풀 노드가 잔액을 거짓으로 보고하면?">
+            <input type="checkbox" id="mkLie" /> <span data-i18n="eth.mk.lieLabel">😈 풀 노드가 거짓말 (잔액 위조)</span>
+          </label>
+          <div class="mk-controls">
+            <button class="btn primary" id="mkRun" data-i18n="eth.mk.run">▶ 증명 재생</button>
+            <button class="btn ghost" id="mkReset" data-i18n="eth.mk.reset">↺ 리셋</button>
+          </div>
+        </div>
+
+        <div class="mk-tree" id="mkTree"></div>
+
+        <div class="mk-bottom">
+          <div class="mk-proof-box">
+            <h3 data-i18n="eth.mk.proofH">풀 노드가 보내는 증명 <small>(형제 해시들 + 값)</small></h3>
+            <div class="mk-proof" id="mkProof"></div>
+          </div>
+          <div class="mk-verify-box">
+            <h3 data-i18n="eth.mk.verifyH">라이트 클라이언트의 재계산</h3>
+            <div class="mk-explain" id="mkExplain"></div>
+            <div class="mk-verdict" id="mkVerdict"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 카드 3: why -->
+      <div class="card">
+        <h2 data-i18n="eth.mk.whyH">왜 못 속이나</h2>
+        <div class="callout key" data-i18n="eth.mk.why1">
+          해시는 <b>값 하나만 바뀌어도 꼭대기 해시가 완전히 달라져요.</b> 그래서 풀 노드가 잔액을 부풀려 보내면, 라이트가 재계산한 stateRoot가 <b>헤더의 stateRoot와 안 맞아요</b>. 위 <b>😈 거짓말</b> 토글을 켜고 재생하면 직접 확인할 수 있어요 — <b>풀 노드를 믿지 않고도</b> 몇 개 해시만으로 진위를 가려내는 게 핵심이에요.
+        </div>
+        <div class="callout" data-i18n="eth.mk.why2">
+          <b>git 비유:</b> 파일(계정) → 디렉토리 해시(중간 노드) → 최종 트리 해시(stateRoot)로 올라가는 구조와 똑같아요. 커밋 해시 하나만 믿으면, 특정 파일이 그 커밋에 진짜 들어있는지 <b>부분 검증</b>할 수 있는 것과 같은 원리예요.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         탭 10: 마무리 (릴레이 총정리 + Web2 비유)
+         ============================================================ -->
+    <section class="tab-panel chain-eth" id="tab-eth-wrapup" data-chain="eth">
+      <!-- 카드 1: 한 줄 요약 -->
+      <div class="card wrap-hero">
+        <h2 data-i18n="eth.wrap.heroH">마무리 — 이더리움은 "멈추지 않는 서버"를 <em>릴레이</em>로 합성한다</h2>
+        <p class="lead" data-i18n="eth.wrap.heroLead">Web2.0에는 24시간 혼자 도는 <b>중앙 서버 한 대</b>가 있어요. 이더리움엔 그런 서버가 <b>없어요</b>. 대신 <b>slot마다 다른 노드가 바통(블록)을 이어받아</b> 상태를 한 칸 전진시키고, 나머지 노드들이 <b>각자 재검산</b>해서 맞는지 확인해요. "쉬지 않는 서버"라는 <b>겉모습은, 번갈아 이어달리는 수천 개의 노드가 합성해내는 착시</b>예요.</p>
+        <div class="wrap-oneline mono">
+          <span class="wo-a" data-i18n="eth.wrap.woA">중앙 서버 1대 (24h 상시)</span>
+          <span class="wo-arrow" data-i18n="eth.wrap.woArrow">→ 대체 →</span>
+          <span class="wo-b" data-i18n="eth.wrap.woB">유인을 가진 수천 노드 · slot마다 바통 릴레이 + 상호 검산</span>
+        </div>
+      </div>
+
+      <!-- 카드 2: 릴레이 도식 -->
+      <div class="card">
+        <h2 data-i18n="eth.wrap.relayH">릴레이 도식 — 바통은 <span class="wr-hl-block">블록 + stateRoot</span></h2>
+        <p class="lead small" data-i18n="eth.wrap.relayLead">각 slot(12초)마다 <b>랜덤 추첨된 제안자 노드 한 명</b>이 tx를 실행해 새 world state와 stateRoot를 만들고(바통 생성), 그걸 다음 slot으로 넘겨요. <b>나머지 검증자들은 그 바통을 받아 각자 재실행</b>해서 stateRoot가 같은지 채점하고 투표해요. 32 slot(=1 epoch)마다 충분히 표가 쌓이면 <b>finalized</b> — 되돌릴 수 없게 굳어요.</p>
+
+        <div class="wrap-relay">
+          <!-- slot N -->
+          <div class="wr-slot">
+            <div class="wr-slot-hd"><span class="wr-slot-n">slot 100</span><span class="wr-slot-t" data-i18n="eth.wrap.sec">12초</span></div>
+            <div class="wr-proposer" data-i18n="eth.wrap.p1">🏃 제안자 <b>#7</b><small>RANDAO 추첨</small></div>
+            <div class="wr-baton" data-i18n="eth.wrap.baton1">📦 블록<br/><span class="mono">stateRoot: a1c3…</span></div>
+            <div class="wr-attest">
+              <span class="wr-vote ok" data-i18n="eth.wrap.reexec">✔ 검증자 재실행</span>
+              <span class="wr-vote ok">✔</span>
+              <span class="wr-vote ok">✔</span>
+              <span class="wr-vote-sum" data-i18n="eth.wrap.agree">2/3 이상 동의</span>
+            </div>
+          </div>
+
+          <div class="wr-pass"><span class="wr-pass-arrow">→</span><span class="wr-pass-lbl" data-i18n="eth.wrap.handoff">state<br/>이어받기</span></div>
+
+          <!-- slot N+1 -->
+          <div class="wr-slot">
+            <div class="wr-slot-hd"><span class="wr-slot-n">slot 101</span><span class="wr-slot-t" data-i18n="eth.wrap.sec">12초</span></div>
+            <div class="wr-proposer" data-i18n="eth.wrap.p2">🏃 제안자 <b>#42</b><small>다른 노드로 교대</small></div>
+            <div class="wr-baton" data-i18n="eth.wrap.baton2">📦 블록<br/><span class="mono">stateRoot: 9f0b…</span></div>
+            <div class="wr-attest">
+              <span class="wr-vote ok" data-i18n="eth.wrap.reexec">✔ 검증자 재실행</span>
+              <span class="wr-vote ok">✔</span>
+              <span class="wr-vote ok">✔</span>
+              <span class="wr-vote-sum" data-i18n="eth.wrap.agree">2/3 이상 동의</span>
+            </div>
+          </div>
+
+          <div class="wr-pass"><span class="wr-pass-arrow">→</span><span class="wr-pass-lbl" data-i18n="eth.wrap.handoff">state<br/>이어받기</span></div>
+
+          <!-- slot N+2 (조작 시도) -->
+          <div class="wr-slot bad">
+            <div class="wr-slot-hd"><span class="wr-slot-n">slot 102</span><span class="wr-slot-t" data-i18n="eth.wrap.sec">12초</span></div>
+            <div class="wr-proposer" data-i18n="eth.wrap.p3">🏃 제안자 <b>#13</b><small>stateRoot 조작 시도</small></div>
+            <div class="wr-baton bad" data-i18n="eth.wrap.baton3">📦 블록<br/><span class="mono">stateRoot: ☠ 위조</span></div>
+            <div class="wr-attest">
+              <span class="wr-vote no" data-i18n="eth.wrap.mismatch">✘ 재실행 → 불일치</span>
+              <span class="wr-vote no">✘</span>
+              <span class="wr-vote no">✘</span>
+              <span class="wr-vote-sum bad" data-i18n="eth.wrap.rejected">거부 · 바통 탈락</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrap-epoch">
+          <div class="we-bar"><span class="we-fill"></span></div>
+          <div class="we-labels">
+            <span>slot 0</span>
+            <span class="we-mark" data-i18n="eth.wrap.justified">justified ✔</span>
+            <span class="we-mark fin" data-i18n="eth.wrap.finalized">finalized 🔒 (되돌릴 수 없음)</span>
+            <span data-i18n="eth.wrap.epochLen">1 epoch = 32 slot</span>
+          </div>
+        </div>
+
+        <div class="callout" data-i18n="eth.wrap.pt1">
+          <b>포인트 1 · 상시 실행이 아님:</b> 어느 노드도 "서버처럼 24시간 돌지" 않아요. <b>바통이 올 때(=블록이 올 때)만</b> 깨어나 검산하고 다시 쉬어요. 컨트랙트 코드가 <b>tx가 없으면 자는 것</b>과 똑같은 이치예요(수동적 실행).
+        </div>
+        <div class="callout" data-i18n="eth.wrap.pt2">
+          <b>포인트 2 · 조작은 처벌이 아니라 탈락:</b> stateRoot를 위조한 블록(slot 102)은 재검산에서 걸려 <b>그냥 거부·무시</b>돼요. 몰수(slashing)는 <b>이중 서명·모순 투표</b>처럼 합의 자체를 공격할 때만 일어나요.
+        </div>
+        <div class="callout key" data-i18n="eth.wrap.pt3">
+          <b>포인트 3 · 연속성은 합성물:</b> slot·epoch·투표·페널티라는 톱니가 맞물려 <b>"끊기지 않는 한 대의 서버" 같은 겉모습</b>을 만들어내요. 실체는 <b>번갈아 이어달리며 서로 검산하는 릴레이</b>예요.
+        </div>
+      </div>
+
+      <!-- 카드 3: Web2 vs Web3 -->
+      <div class="card">
+        <h2 data-i18n="eth.wrap.vsH">Web2.0 서버 vs 이더리움 릴레이</h2>
+        <div class="wrap-vs">
+          <div class="wv-col web2">
+            <div class="wv-hd" data-i18n="eth.wrap.web2H">Web2.0 — 중앙 서버</div>
+            <ul data-i18n="eth.wrap.web2List">
+              <li><b>한 대</b>가 24시간 상시 실행(프로세스 상주)</li>
+              <li>그 서버가 계산하면 <b>믿어줌</b></li>
+              <li>신뢰의 근거 = <b>운영 회사</b></li>
+              <li>회사가 마음먹으면 <b>값·로직을 바꿀 수 있음</b></li>
+              <li>멈추면 서비스도 멈춤 (단일 실패점)</li>
+            </ul>
+          </div>
+          <div class="wv-col web3">
+            <div class="wv-hd" data-i18n="eth.wrap.web3H">Web3.0 — 이더리움</div>
+            <ul data-i18n="eth.wrap.web3List">
+              <li>상시 서버 <b>없음</b>. slot마다 <b>다른 노드가 바통 이어받음</b></li>
+              <li>수천 노드가 <b>전부 재실행해 대조</b>(믿지 않고 검산)</li>
+              <li>신뢰의 근거 = <b>경제적 유인 + 게임이론</b>(stake·보상·slashing)</li>
+              <li>코드는 <b>불변</b>. 아무도 결과를 못 바꿈</li>
+              <li>노드 일부가 죽어도 나머지가 릴레이 계속</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout key" data-i18n="eth.wrap.vsConcl">
+          <b>한 줄로:</b> Web2가 <b>"신뢰할 수 있는 회사"</b>로 중앙화를 정당화했다면, 이더리움은 그걸 <b>"신뢰할 필요 없는 인센티브 설계(인간 심리)"</b>로 대체했어요. 중앙화 문제를 기술이 아니라 <b>경제·게임이론</b>으로 푼 게 핵심이에요.
+        </div>
+      </div>
+
+      <!-- 카드 4: 대화 총정리 -->
+      <div class="card">
+        <h2 data-i18n="eth.wrap.sumH">우리가 짚은 것 총정리</h2>
+        <div class="flow wrap-flow" data-i18n="eth.wrap.sumFlow">
+          <div class="node"><div class="n">1</div><div class="t">코드는 잔다</div><div class="d">컨트랙트는 state에 저장된 데이터일 뿐. tx가 호출할 때만 실행(수동적).</div></div>
+          <div class="node"><div class="n">2</div><div class="t">자동 실행은 없음</div><div class="d">"3000 넘으면 execute"는 체인 밖 <b>keeper·봇</b>이 감시하다 tx로 호출. 가격은 <b>오라클</b>이 넣어줌.</div></div>
+          <div class="node"><div class="n">3</div><div class="t">모두가 재실행</div><div class="d">각 노드가 <b>자기 복사본</b>에서 계산. 그래서 v+1을 N번 해도 v+N이 아니라 전부 v+1(같은 문제 N명이 풀기).</div></div>
+          <div class="node"><div class="n">4</div><div class="t">결정론이 조건</div><div class="d">난수·외부 API·현재시각 금지. 안 그러면 노드마다 답이 달라져 검산 불가.</div></div>
+          <div class="node"><div class="n">5</div><div class="t">틀리면 탈락 / 공격은 몰수</div><div class="d">stateRoot 오류 → 거부. 이중 서명·모순 투표 → slashing. offline → 소액 감소.</div></div>
+          <div class="node"><div class="n">6</div><div class="t">justified → finalized</div><div class="d">2/3 투표로 굳어지면 되돌릴 수 없음. 그때 world state에 블록 확정.</div></div>
+        </div>
+        <div class="callout ok" data-i18n="eth.wrap.sumConcl">
+          <b>결론:</b> 스마트 컨트랙트는 "스스로 사는 프로그램"이 아니라 <b>호출되면 약속대로만 움직이는 불변 규칙 엔진</b>이고, 그 호출을 <b>누가·언제 할지</b>는 여전히 인간 세계(Web2)에 남아 있어요. 이더리움이 Web2에 기대 보이는 건 <b>순수하지 못해서가 아니라, 하려는 일이 더 많아서</b>예요.
         </div>
       </div>
     </section>
